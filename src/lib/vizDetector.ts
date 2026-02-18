@@ -142,6 +142,19 @@ export function detectVizType(trace: Trace): VizContext {
         }
         return { type: "graph", primaryVar: graphVar, auxVars, pointerVars: [], scalarVars: [] };
     }
+    // 2b. Linked list detection — {__type__: "linked_list", values: [...]}
+    const linkedListVar = findVariableByPredicate(trace, (val) => {
+        return val !== null && typeof val === "object" && !Array.isArray(val) &&
+            (val as Record<string, unknown>).__type__ === "linked_list";
+    });
+    if (linkedListVar) {
+        const auxVars: string[] = [];
+        for (const name of ["prev", "current", "next_node", "head", "reversed_head", "node", "temp"]) {
+            if (allVarNames.has(name)) auxVars.push(name);
+        }
+        const scalarVars = findScalarVars(trace, allVarNames, [linkedListVar]);
+        return { type: "array", primaryVar: linkedListVar, auxVars, pointerVars: [], scalarVars };
+    }
 
     // 3. Grid detection — 2D array
     const gridVar = findVariableByPredicate(trace, is2DGrid);

@@ -329,6 +329,12 @@ export default function Home() {
         alert("Execution Error: " + data.error);
       } else {
         setTrace(data.trace);
+        // Auto-start animation after execution
+        if (data.trace.length > 0) {
+          setTimeout(() => {
+            useTraceStore.getState().togglePlay();
+          }, 100);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -396,7 +402,6 @@ export default function Home() {
           <div className="flex-1 min-h-0">
             <CodeEditor code={code} language={language} onChange={(val) => setCode(val || "")} />
           </div>
-          <StepSlider />
         </div>
 
         {/* Right Side: Visualization */}
@@ -442,6 +447,8 @@ export default function Home() {
               )
             )}
           </div>
+          {/* Iteration slider — under visualization for easy access */}
+          <StepSlider />
         </div>
       </div>
 

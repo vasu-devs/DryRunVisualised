@@ -182,10 +182,10 @@ function ArrayRow({
                                         ? COLORS.changedBg
                                         : COLORS.cellDefault,
                                 border: `2px solid ${isPointed
-                                        ? pointedBy[0].color
-                                        : changed
-                                            ? COLORS.changed
-                                            : COLORS.cardBorder
+                                    ? pointedBy[0].color
+                                    : changed
+                                        ? COLORS.changed
+                                        : COLORS.cardBorder
                                     }`,
                                 borderRadius: 6,
                                 transition: "all 0.2s ease",
@@ -247,10 +247,10 @@ function ScalarBadge({
                     ? COLORS.pointerBg
                     : COLORS.cardBg,
             border: `1px solid ${changed
-                    ? COLORS.changed
-                    : isPointer
-                        ? COLORS.pointer
-                        : COLORS.cardBorder
+                ? COLORS.changed
+                : isPointer
+                    ? COLORS.pointer
+                    : COLORS.cardBorder
                 }`,
             transition: "all 0.2s ease",
         }}>
@@ -288,45 +288,150 @@ function ScalarBadge({
     );
 }
 
+// ─── Helper: detect serialized linked list ────────────────────
+function isLinkedListValue2D(val: unknown): val is { __type__: "linked_list"; values: unknown[] } {
+    return (
+        val !== null &&
+        typeof val === "object" &&
+        (val as Record<string, unknown>).__type__ === "linked_list" &&
+        Array.isArray((val as Record<string, unknown>).values)
+    );
+}
+
+// ─── Linked List View (2D) ────────────────────────────────────
+function LinkedListView2D({ name, values }: { name: string; values: unknown[] }) {
+    const n = values.length;
+    return (
+        <div style={{ marginBottom: 16 }}>
+            <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 6,
+            }}>
+                <span style={{
+                    color: "#4ade80",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    fontFamily: "monospace",
+                    letterSpacing: "0.5px",
+                }}>
+                    {name}
+                </span>
+                <span style={{
+                    color: COLORS.textMuted,
+                    fontSize: 10,
+                }}>
+                    linked list [{n}]
+                </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 0 }}>
+                {/* HEAD label */}
+                <span style={{
+                    fontSize: 9,
+                    fontWeight: 700,
+                    color: "#22c55e",
+                    fontFamily: "monospace",
+                    marginRight: 6,
+                    padding: "2px 5px",
+                    background: "#052e16",
+                    borderRadius: 4,
+                    border: "1px solid #166534",
+                }}>
+                    HEAD
+                </span>
+                {values.map((val, idx) => (
+                    <div key={idx} style={{ display: "flex", alignItems: "center" }}>
+                        {/* Node box */}
+                        <div style={{
+                            display: "flex",
+                            alignItems: "stretch",
+                            border: `2px solid ${idx === 0 ? "#22c55e" : "#166534"}`,
+                            borderRadius: 6,
+                            overflow: "hidden",
+                            background: idx === 0 ? "#052e16" : COLORS.cardBg,
+                        }}>
+                            {/* val compartment */}
+                            <div style={{
+                                padding: "6px 10px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                minWidth: 36,
+                                borderRight: "1px solid #16653480",
+                            }}>
+                                <span style={{
+                                    color: "white",
+                                    fontSize: 13,
+                                    fontWeight: 700,
+                                    fontFamily: "monospace",
+                                }}>
+                                    {formatCellValue(val)}
+                                </span>
+                            </div>
+                            {/* next pointer compartment */}
+                            <div style={{
+                                padding: "6px 6px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                minWidth: 20,
+                            }}>
+                                <span style={{
+                                    color: idx === n - 1 ? "#ef4444" : "#4ade80",
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                }}>
+                                    {idx === n - 1 ? "∅" : "→"}
+                                </span>
+                            </div>
+                        </div>
+                        {/* Arrow connecting to next */}
+                        {idx < n - 1 && (
+                            <span style={{
+                                color: "#4ade80",
+                                fontSize: 14,
+                                fontWeight: 700,
+                                margin: "0 2px",
+                            }}>
+                                →
+                            </span>
+                        )}
+                    </div>
+                ))}
+                {/* NULL label */}
+                <span style={{
+                    fontSize: 9,
+                    fontWeight: 700,
+                    color: "#ef4444",
+                    fontFamily: "monospace",
+                    marginLeft: 6,
+                    padding: "2px 5px",
+                    background: "#1c0a0a",
+                    borderRadius: 4,
+                    border: "1px solid #7f1d1d",
+                }}>
+                    NULL
+                </span>
+            </div>
+        </div>
+    );
+}
+
 // ─── Dictionary / Object View ─────────────────────────────────
-function DictView({ name, data }: { name: string; data: Record<string, unknown> }) {
+function DictView({ name, data, visited, queue, current }: { name: string; data: Record<string, unknown>; visited?: unknown[]; queue?: unknown[]; current?: unknown }) {
     const entries = Object.entries(data);
     const isGraph = entries.every(([, v]) => Array.isArray(v));
 
     if (isGraph) {
         return (
-            <div style={{ marginBottom: 12 }}>
-                <span style={{
-                    color: COLORS.highlight,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    fontFamily: "monospace",
-                }}>
-                    {name} <span style={{ color: COLORS.textMuted, fontWeight: 400 }}>(graph)</span>
-                </span>
-                <div style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 4,
-                    marginTop: 4,
-                }}>
-                    {entries.map(([k, v]) => (
-                        <div key={k} style={{
-                            padding: "3px 8px",
-                            borderRadius: 4,
-                            background: COLORS.cardBg,
-                            border: `1px solid ${COLORS.cardBorder}`,
-                            fontSize: 11,
-                            fontFamily: "monospace",
-                            color: COLORS.textDim,
-                        }}>
-                            <span style={{ color: COLORS.accent }}>{k}</span>
-                            <span style={{ color: COLORS.textMuted }}> → </span>
-                            <span style={{ color: COLORS.text }}>{JSON.stringify(v)}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
+            <GraphView2D
+                name={name}
+                adj={data as Record<string, number[]>}
+                visited={visited}
+                queue={queue}
+                current={current}
+            />
         );
     }
 
@@ -362,6 +467,240 @@ function DictView({ name, data }: { name: string; data: Record<string, unknown> 
                     </div>
                 ))}
             </div>
+        </div>
+    );
+}
+
+// ─── SVG Graph Visualization (2D) ────────────────────────────
+function GraphView2D({
+    name,
+    adj,
+    visited,
+    queue,
+    current,
+}: {
+    name: string;
+    adj: Record<string, number[]>;
+    visited?: unknown[];
+    queue?: unknown[];
+    current?: unknown;
+}) {
+    const nodeIds = Object.keys(adj);
+    const n = nodeIds.length;
+    const visitedSet = new Set((visited || []).map(String));
+    const queueSet = new Set((queue || []).map(String));
+    const currentStr = current !== undefined ? String(current) : null;
+
+    // Force-directed layout
+    const layout = useMemo(() => {
+        if (n === 0) return new Map<string, { x: number; y: number }>();
+
+        const SCALE = 100;
+        const positions: Record<string, { x: number; y: number }> = {};
+        nodeIds.forEach((id, i) => {
+            const angle = (2 * Math.PI * i) / n - Math.PI / 2;
+            positions[id] = {
+                x: Math.cos(angle) * SCALE,
+                y: Math.sin(angle) * SCALE,
+            };
+        });
+
+        // Build edges
+        const edgeSet = new Set<string>();
+        const edgeList: [string, string][] = [];
+        for (const [node, neighbors] of Object.entries(adj)) {
+            for (const neighbor of neighbors) {
+                const key = [node, String(neighbor)].sort().join("-");
+                if (!edgeSet.has(key)) {
+                    edgeSet.add(key);
+                    edgeList.push([node, String(neighbor)]);
+                }
+            }
+        }
+
+        // Force simulation
+        const REPULSION = 3000;
+        const SPRING_K = 0.05;
+        const IDEAL_LENGTH = SCALE * 0.8;
+        const DAMPING = 0.85;
+        const ITERATIONS = 150;
+
+        for (let iter = 0; iter < ITERATIONS; iter++) {
+            const forces: Record<string, { fx: number; fy: number }> = {};
+            for (const id of nodeIds) forces[id] = { fx: 0, fy: 0 };
+
+            // Repulsion
+            for (let i = 0; i < n; i++) {
+                for (let j = i + 1; j < n; j++) {
+                    const a = nodeIds[i], b = nodeIds[j];
+                    const dx = positions[b].x - positions[a].x;
+                    const dy = positions[b].y - positions[a].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy) + 0.1;
+                    const force = REPULSION / (dist * dist);
+                    const fx = (dx / dist) * force;
+                    const fy = (dy / dist) * force;
+                    forces[a].fx -= fx; forces[a].fy -= fy;
+                    forces[b].fx += fx; forces[b].fy += fy;
+                }
+            }
+
+            // Spring attraction
+            for (const [a, b] of edgeList) {
+                const dx = positions[b].x - positions[a].x;
+                const dy = positions[b].y - positions[a].y;
+                const dist = Math.sqrt(dx * dx + dy * dy) + 0.1;
+                const displacement = dist - IDEAL_LENGTH;
+                const force = SPRING_K * displacement;
+                const fx = (dx / dist) * force;
+                const fy = (dy / dist) * force;
+                forces[a].fx += fx; forces[a].fy += fy;
+                forces[b].fx -= fx; forces[b].fy -= fy;
+            }
+
+            // Center gravity
+            for (const id of nodeIds) {
+                forces[id].fx -= positions[id].x * 0.005;
+                forces[id].fy -= positions[id].y * 0.005;
+            }
+
+            const cooling = 1 - iter / ITERATIONS;
+            for (const id of nodeIds) {
+                positions[id].x += forces[id].fx * DAMPING * cooling;
+                positions[id].y += forces[id].fy * DAMPING * cooling;
+            }
+        }
+
+        const result = new Map<string, { x: number; y: number }>();
+        for (const id of nodeIds) result.set(id, positions[id]);
+        return result;
+    }, [nodeIds, adj, n]);
+
+    // Compute bounding box
+    const bounds = useMemo(() => {
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        layout.forEach(pos => {
+            minX = Math.min(minX, pos.x); maxX = Math.max(maxX, pos.x);
+            minY = Math.min(minY, pos.y); maxY = Math.max(maxY, pos.y);
+        });
+        const padding = 30;
+        return {
+            x: minX - padding, y: minY - padding,
+            w: maxX - minX + padding * 2, h: maxY - minY + padding * 2,
+        };
+    }, [layout]);
+
+    // Edges with deduplication
+    const edges = useMemo(() => {
+        const e: { from: string; to: string }[] = [];
+        const seen = new Set<string>();
+        for (const [node, neighbors] of Object.entries(adj)) {
+            for (const neighbor of neighbors) {
+                const key = [node, String(neighbor)].sort().join("-");
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    e.push({ from: node, to: String(neighbor) });
+                }
+            }
+        }
+        return e;
+    }, [adj]);
+
+    // Graph center for edge curving
+    const graphCenter = useMemo(() => {
+        let cx = 0, cy = 0;
+        layout.forEach(pos => { cx += pos.x; cy += pos.y; });
+        const count = layout.size || 1;
+        return { x: cx / count, y: cy / count };
+    }, [layout]);
+
+    const NODE_R = 18;
+
+    const getEdgePath = (fromPos: { x: number; y: number }, toPos: { x: number; y: number }): string => {
+        const dx = toPos.x - fromPos.x;
+        const dy = toPos.y - fromPos.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 1) return "";
+
+        const ux = dx / dist, uy = dy / dist;
+        const sx = fromPos.x + ux * NODE_R, sy = fromPos.y + uy * NODE_R;
+        const ex = toPos.x - ux * NODE_R, ey = toPos.y - uy * NODE_R;
+
+        // Perpendicular away from center
+        const midX = (fromPos.x + toPos.x) / 2;
+        const midY = (fromPos.y + toPos.y) / 2;
+        const perpX = -uy, perpY = ux;
+        const cdx = midX - graphCenter.x, cdy = midY - graphCenter.y;
+        const dot = cdx * perpX + cdy * perpY;
+        const sign = dot >= 0 ? 1 : -1;
+        const curvature = Math.min(dist * 0.12, 25);
+        const ctrlX = midX + perpX * curvature * sign;
+        const ctrlY = midY + perpY * curvature * sign;
+
+        return `M ${sx} ${sy} Q ${ctrlX} ${ctrlY} ${ex} ${ey}`;
+    };
+
+    if (n === 0) return null;
+
+    return (
+        <div style={{ marginBottom: 12 }}>
+            <span style={{
+                color: COLORS.highlight,
+                fontSize: 12,
+                fontWeight: 600,
+                fontFamily: "monospace",
+            }}>
+                {name} <span style={{ color: COLORS.textMuted, fontWeight: 400 }}>(graph)</span>
+            </span>
+            <svg
+                viewBox={`${bounds.x} ${bounds.y} ${bounds.w} ${bounds.h}`}
+                style={{
+                    width: "100%",
+                    maxWidth: 420,
+                    height: "auto",
+                    maxHeight: 300,
+                    marginTop: 6,
+                    display: "block",
+                }}
+            >
+                {/* Edges */}
+                {edges.map(({ from, to }) => {
+                    const fromPos = layout.get(from);
+                    const toPos = layout.get(to);
+                    if (!fromPos || !toPos) return null;
+                    const isTraversed = visitedSet.has(from) && visitedSet.has(to);
+                    return (
+                        <path
+                            key={`${from}-${to}`}
+                            d={getEdgePath(fromPos, toPos)}
+                            fill="none"
+                            stroke={isTraversed ? COLORS.changed : "#475569"}
+                            strokeWidth={isTraversed ? 2.5 : 1.5}
+                            opacity={isTraversed ? 1 : 0.45}
+                        />
+                    );
+                })}
+                {/* Nodes */}
+                {nodeIds.map(id => {
+                    const pos = layout.get(id);
+                    if (!pos) return null;
+                    let fill = "#475569";
+                    let stroke = "#64748b";
+                    if (id === currentStr) { fill = "#d97706"; stroke = "#f59e0b"; }
+                    else if (visitedSet.has(id)) { fill = "#16a34a"; stroke = "#22c55e"; }
+                    else if (queueSet.has(id)) { fill = "#2563eb"; stroke = "#3b82f6"; }
+                    return (
+                        <g key={id}>
+                            <circle cx={pos.x} cy={pos.y} r={NODE_R} fill={fill} stroke={stroke} strokeWidth={2} />
+                            <text
+                                x={pos.x} y={pos.y} textAnchor="middle" dominantBaseline="central"
+                                fill="white" fontSize={12} fontFamily="monospace" fontWeight={600}
+                            >
+                                {id}
+                            </text>
+                        </g>
+                    );
+                })}
+            </svg>
         </div>
     );
 }
@@ -406,6 +745,7 @@ export function Visualization2D({ step, prevStep, vizCtx }: Visualization2DProps
 
     // Separate variables by type for rendering
     const arrays: Array<{ name: string; value: unknown[] }> = [];
+    const linkedLists: Array<{ name: string; values: unknown[] }> = [];
     const dicts: Array<{ name: string; value: Record<string, unknown> }> = [];
     const scalars: Array<{ name: string; value: unknown }> = [];
 
@@ -413,7 +753,12 @@ export function Visualization2D({ step, prevStep, vizCtx }: Visualization2DProps
         if (v.type === "array") {
             arrays.push({ name: v.name, value: v.value as unknown[] });
         } else if (v.type === "dict") {
-            dicts.push({ name: v.name, value: v.value as Record<string, unknown> });
+            // Check for serialized linked list first
+            if (isLinkedListValue2D(v.value)) {
+                linkedLists.push({ name: v.name, values: (v.value as { __type__: string; values: unknown[] }).values });
+            } else {
+                dicts.push({ name: v.name, value: v.value as Record<string, unknown> });
+            }
         } else if (v.type === "scalar") {
             scalars.push({ name: v.name, value: v.value });
         }
@@ -518,12 +863,48 @@ export function Visualization2D({ step, prevStep, vizCtx }: Visualization2DProps
                 </div>
             )}
 
+            {/* Linked Lists — rendered as node chains */}
+            {linkedLists.length > 0 && (
+                <div>
+                    <div style={{
+                        fontSize: 10,
+                        color: COLORS.textMuted,
+                        textTransform: "uppercase",
+                        letterSpacing: "1px",
+                        marginBottom: 6,
+                        fontWeight: 600,
+                    }}>
+                        Linked Lists
+                    </div>
+                    {linkedLists.map(ll => (
+                        <LinkedListView2D
+                            key={ll.name}
+                            name={ll.name}
+                            values={ll.values}
+                        />
+                    ))}
+                </div>
+            )}
+
             {/* Dictionaries / Graphs */}
             {dicts.length > 0 && (
                 <div>
-                    {dicts.map(d => (
-                        <DictView key={d.name} name={d.name} data={d.value} />
-                    ))}
+                    {dicts.map(d => {
+                        // Extract graph traversal state from step stack
+                        const graphVisited = step.stack["visited"] as unknown[] | undefined;
+                        const graphQueue = step.stack["queue"] as unknown[] | undefined;
+                        const graphCurrent = step.stack["current"] ?? step.stack["node"] ?? step.stack["curr"];
+                        return (
+                            <DictView
+                                key={d.name}
+                                name={d.name}
+                                data={d.value}
+                                visited={graphVisited}
+                                queue={graphQueue}
+                                current={graphCurrent}
+                            />
+                        );
+                    })}
                 </div>
             )}
 

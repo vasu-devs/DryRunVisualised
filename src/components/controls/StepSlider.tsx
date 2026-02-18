@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useMemo } from "react";
+import { useEffect, useRef, useCallback } from "react";
+import { Play, Pause } from "lucide-react";
 import { useTraceStore } from "@/lib/store/traceStore";
 
 const SPEED_OPTIONS = [
@@ -19,16 +20,13 @@ function hasVisualChange(a: Record<string, unknown>, b: Record<string, unknown>)
     const keysA = Object.keys(a);
     const keysB = Object.keys(b);
 
-    // New variable appeared or disappeared
     if (keysA.length !== keysB.length) return true;
 
     for (const key of keysB) {
         const va = a[key];
         const vb = b[key];
-        if (va === undefined) return true; // new variable
-        // Quick shallow compare
+        if (va === undefined) return true;
         if (va !== vb) {
-            // For arrays/objects, compare JSON (fast enough for small traces)
             if (typeof va === "object" || typeof vb === "object") {
                 try {
                     if (JSON.stringify(va) !== JSON.stringify(vb)) return true;
@@ -44,7 +42,7 @@ function hasVisualChange(a: Record<string, unknown>, b: Record<string, unknown>)
 }
 
 export function StepSlider() {
-    const { trace, currentStepIndex, setStep, isPlaying, playSpeed, setPlaySpeed } = useTraceStore();
+    const { trace, currentStepIndex, setStep, isPlaying, togglePlay, playSpeed, setPlaySpeed } = useTraceStore();
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const smartStep = useCallback(() => {
@@ -58,7 +56,6 @@ export function StepSlider() {
         // At high speeds (≤100ms), skip non-visual steps
         if (state.playSpeed <= 100) {
             let next = idx + 1;
-            // Skip ahead up to 5 steps if nothing visual changed
             while (next < t.length - 1 && next - idx < 5) {
                 if (hasVisualChange(t[idx].stack, t[next].stack)) break;
                 next++;
@@ -90,8 +87,20 @@ export function StepSlider() {
     if (trace.length === 0) return null;
 
     return (
-        <div className="px-4 py-2 bg-slate-900 border-t border-slate-800 flex items-center gap-4">
-            <span className="text-xs font-mono text-slate-500 whitespace-nowrap">
+        <div className="px-4 py-2 bg-slate-900/80 backdrop-blur-sm border-t border-slate-800 flex items-center gap-3">
+            {/* Play/Pause button — integrated into slider bar */}
+            <button
+                onClick={togglePlay}
+                className={`p-1.5 rounded-md transition-colors ${isPlaying
+                        ? "bg-amber-600/20 text-amber-400 hover:bg-amber-600/30"
+                        : "bg-blue-600/20 text-blue-400 hover:bg-blue-600/30"
+                    }`}
+                title={isPlaying ? "Pause" : "Play"}
+            >
+                {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
+            </button>
+
+            <span className="text-xs font-mono text-slate-500 whitespace-nowrap min-w-[80px]">
                 Step {currentStepIndex + 1} / {trace.length}
             </span>
             <input
@@ -109,8 +118,8 @@ export function StepSlider() {
                         key={opt.value}
                         onClick={() => setPlaySpeed(opt.value)}
                         className={`px-1.5 py-0.5 text-[10px] font-mono rounded transition-colors ${playSpeed === opt.value
-                                ? "bg-blue-600 text-white"
-                                : "text-slate-500 hover:text-slate-300 hover:bg-slate-800"
+                            ? "bg-blue-600 text-white"
+                            : "text-slate-500 hover:text-slate-300 hover:bg-slate-800"
                             }`}
                     >
                         {opt.label}
