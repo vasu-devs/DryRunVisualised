@@ -80,6 +80,14 @@ function getSortedVariables(step: TraceStep, vizCtx: VizContext): Array<{ name: 
 }
 
 // ─── Array Cell Row Component ─────────────────────────────────
+function formatCellValue(val: unknown): string {
+    if (typeof val === "number") return String(val);
+    if (typeof val === "boolean") return val ? "T" : "F";
+    if (typeof val === "string") return val;
+    if (val === null || val === undefined) return "—";
+    return JSON.stringify(val);
+}
+
 function ArrayRow({
     name,
     data,
@@ -93,8 +101,15 @@ function ArrayRow({
     pointers: Array<{ name: string; index: number; color: string }>;
     isPrimary: boolean;
 }) {
-    const cellSize = isPrimary ? 48 : 40;
-    const fontSize = isPrimary ? 14 : 12;
+    const baseFontSize = isPrimary ? 13 : 11;
+
+    // Compute cell widths based on content
+    const cellWidths = data.map(val => {
+        const text = formatCellValue(val);
+        // Approximate: 8px per char + 16px padding, minimum 40px
+        return Math.max(40, text.length * 8 + 16);
+    });
+    const cellHeight = isPrimary ? 42 : 36;
 
     return (
         <div style={{ marginBottom: 12 }}>
@@ -124,9 +139,12 @@ function ArrayRow({
             {/* Cells */}
             <div style={{ display: "flex", gap: 2, flexWrap: "wrap", alignItems: "flex-end" }}>
                 {data.map((val, idx) => {
-                    const changed = prevData && idx < prevData.length && prevData[idx] !== val;
+                    const changed = prevData && idx < prevData.length &&
+                        JSON.stringify(prevData[idx]) !== JSON.stringify(val);
                     const pointedBy = pointers.filter(p => p.index === idx);
                     const isPointed = pointedBy.length > 0;
+                    const cellW = cellWidths[idx];
+                    const displayText = formatCellValue(val);
 
                     return (
                         <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
@@ -152,34 +170,34 @@ function ArrayRow({
 
                             {/* Cell */}
                             <div style={{
-                                width: cellSize,
-                                height: cellSize,
+                                minWidth: cellW,
+                                height: cellHeight,
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
+                                padding: "0 6px",
                                 background: isPointed
                                     ? `${pointedBy[0].color}30`
                                     : changed
                                         ? COLORS.changedBg
                                         : COLORS.cellDefault,
-                                border: `2px solid ${
-                                    isPointed
+                                border: `2px solid ${isPointed
                                         ? pointedBy[0].color
                                         : changed
                                             ? COLORS.changed
                                             : COLORS.cardBorder
-                                }`,
+                                    }`,
                                 borderRadius: 6,
                                 transition: "all 0.2s ease",
-                                position: "relative",
                             }}>
                                 <span style={{
                                     color: changed ? COLORS.changed : COLORS.text,
-                                    fontSize,
+                                    fontSize: baseFontSize,
                                     fontWeight: changed ? 700 : 500,
                                     fontFamily: "monospace",
+                                    whiteSpace: "nowrap",
                                 }}>
-                                    {typeof val === "number" ? val : JSON.stringify(val)}
+                                    {displayText}
                                 </span>
                             </div>
 
@@ -228,13 +246,12 @@ function ScalarBadge({
                 : isPointer
                     ? COLORS.pointerBg
                     : COLORS.cardBg,
-            border: `1px solid ${
-                changed
+            border: `1px solid ${changed
                     ? COLORS.changed
                     : isPointer
                         ? COLORS.pointer
                         : COLORS.cardBorder
-            }`,
+                }`,
             transition: "all 0.2s ease",
         }}>
             <span style={{

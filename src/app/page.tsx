@@ -316,6 +316,7 @@ export default function Home() {
 
   const handleExecute = async () => {
     setIsExecuting(true);
+    setTrace([]); // Clear old trace immediately to prevent stale vizCtx
     try {
       const response = await fetch("/api/execute", {
         method: "POST",
@@ -405,8 +406,8 @@ export default function Home() {
             <button
               onClick={() => setViewMode("2d")}
               className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${viewMode === "2d"
-                  ? "bg-blue-600 text-white"
-                  : "bg-slate-800 text-slate-400 hover:text-slate-200"
+                ? "bg-blue-600 text-white"
+                : "bg-slate-800 text-slate-400 hover:text-slate-200"
                 }`}
             >
               2D View
@@ -414,8 +415,8 @@ export default function Home() {
             <button
               onClick={() => setViewMode("3d")}
               className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${viewMode === "3d"
-                  ? "bg-blue-600 text-white"
-                  : "bg-slate-800 text-slate-400 hover:text-slate-200"
+                ? "bg-blue-600 text-white"
+                : "bg-slate-800 text-slate-400 hover:text-slate-200"
                 }`}
             >
               3D View

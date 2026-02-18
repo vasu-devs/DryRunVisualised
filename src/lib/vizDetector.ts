@@ -48,13 +48,31 @@ function isAdjacencyList(val: unknown): boolean {
 
 /**
  * Checks if a value is a 2D rectangular array (matrix/grid).
+ * Must have uniform row lengths AND contain only primitive values (numbers, strings, booleans).
+ * Arrays of tuples like [[10,true],[9,false]] should NOT match.
  */
 function is2DGrid(val: unknown): boolean {
     if (!Array.isArray(val) || val.length < 2) return false;
     if (!Array.isArray(val[0])) return false;
     const rowLen = val[0].length;
-    if (rowLen < 1) return false;
-    return val.every((row: unknown) => Array.isArray(row) && row.length === rowLen);
+    if (rowLen < 2) return false; // Need at least 2 columns to be a meaningful grid
+    // All rows must have same length
+    if (!val.every((row: unknown) => Array.isArray(row) && row.length === rowLen)) return false;
+    // For true grids: all cells in each row must be the SAME type
+    // This rejects tuples like [10, true] (number + boolean) which are Python tuples
+    for (const row of val) {
+        const types = new Set((row as unknown[]).map(cell => typeof cell));
+        // Mixed types in a single row = tuple/pair, not a grid row
+        if (types.size > 1) return false;
+        // Each cell must be a simple scalar
+        for (const cell of row as unknown[]) {
+            if (typeof cell === "number") continue;
+            if (typeof cell === "boolean") continue;
+            if (typeof cell === "string" && cell.length <= 2) continue;
+            return false;
+        }
+    }
+    return true;
 }
 
 /**
@@ -63,6 +81,13 @@ function is2DGrid(val: unknown): boolean {
 function is1DNumericArray(val: unknown): boolean {
     if (!Array.isArray(val) || val.length < 2) return false;
     return val.every((v: unknown) => typeof v === "number");
+}
+
+/**
+ * Checks if a value is any 1D array (can contain any type).
+ */
+function is1DAnyArray(val: unknown): boolean {
+    return Array.isArray(val) && val.length >= 1;
 }
 
 /**
@@ -128,7 +153,7 @@ export function detectVizType(trace: Trace): VizContext {
         return { type: "grid", primaryVar: gridVar, auxVars, pointerVars: [], scalarVars: [] };
     }
 
-    // 4. Array detection (UNIVERSAL FALLBACK) — any 1D numeric array
+    // 4. Array detection (UNIVERSAL FALLBACK) — any 1D numeric array first, then any array
     const arrayVar = findBestArray(trace, varSamples);
     if (arrayVar) {
         // Auto-detect pointer-like scalars: integers that could be array indices
@@ -142,6 +167,34 @@ export function detectVizType(trace: Trace): VizContext {
             primaryVar: arrayVar,
             auxVars: pointerVars,
             pointerVars,
+            scalarVars,
+        };
+    }
+
+    // 5. Any array at all (non-numeric arrays like fib_stack containing tuples)
+    const anyArrayVar = findBestAnyArray(trace, varSamples);
+    if (anyArrayVar) {
+        const scalarVars = findScalarVars(trace, allVarNames, [anyArrayVar]);
+        return {
+            type: "array",
+            primaryVar: anyArrayVar,
+            auxVars: [],
+            pointerVars: [],
+            scalarVars,
+        };
+    }
+
+    // 6. Check if there are any dicts/objects worth showing
+    const hasDicts = [...varSamples.entries()].some(([, s]) =>
+        typeof s.value === "object" && s.value !== null && !Array.isArray(s.value)
+    );
+    if (hasDicts) {
+        const scalarVars = findScalarVars(trace, allVarNames, []);
+        return {
+            type: "none",
+            primaryVar: null,
+            auxVars: [],
+            pointerVars: [],
             scalarVars,
         };
     }
@@ -172,6 +225,28 @@ function findBestArray(
     return candidates[0].name;
 }
 
+/**
+ * Find the best ANY-type array variable (for non-numeric arrays like arrays of tuples).
+ */
+function findBestAnyArray(
+    trace: Trace,
+    varSamples: Map<string, { value: unknown; maxLen: number }>
+): string | null {
+    const candidates: { name: string; score: number }[] = [];
+
+    for (const [name, sample] of varSamples.entries()) {
+        if (is1DAnyArray(sample.value) && !is2DGrid(sample.value)) {
+            let score = sample.maxLen;
+            if (AUX_NAMES.has(name)) score -= 100;
+            if (name.startsWith("test") || name === "t") score -= 50;
+            candidates.push({ name, score });
+        }
+    }
+
+    if (candidates.length === 0) return null;
+    candidates.sort((a, b) => b.score - a.score);
+    return candidates[0].name;
+}
 /**
  * Find the first variable name in the trace that matches a predicate.
  */

@@ -45,7 +45,7 @@ export const useTraceStore = create<TraceState>((set, get) => ({
 
     setPlaySpeed: (speed) => set({ playSpeed: speed }),
 
-    reset: () => set({ currentStepIndex: 0, isPlaying: false }),
+    reset: () => set({ trace: [], currentStepIndex: 0, isPlaying: false }),
 
     getCurrentStep: () => {
         const { trace, currentStepIndex } = get();
