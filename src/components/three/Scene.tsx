@@ -103,11 +103,11 @@ function CameraToolbar({
     onZoomOut: () => void;
 }) {
     const btnBase =
-        "flex items-center justify-center w-8 h-8 rounded-lg text-xs font-semibold transition-all duration-150 backdrop-blur-md border select-none";
+        "flex items-center justify-center w-8 h-8 text-xs font-semibold transition-all duration-150 backdrop-blur-md select-none rounded-[10px]";
     const active =
-        "bg-blue-600/80 text-white border-blue-500/60 shadow-lg shadow-blue-500/20";
+        "bg-glass-100/50 text-white border border-glass-border-light shadow-lg shadow-black/20";
     const inactive =
-        "bg-slate-800/60 text-slate-400 border-slate-700/50 hover:bg-slate-700/70 hover:text-slate-200";
+        "bg-transparent text-slate-400 border border-transparent hover:bg-glass-100/20 hover:text-slate-200";
 
     return (
         <div
@@ -115,7 +115,7 @@ function CameraToolbar({
             style={{ pointerEvents: "auto" }}
         >
             {/* Mode Toggle */}
-            <div className="flex items-center bg-slate-900/70 backdrop-blur-md rounded-xl p-1 border border-slate-700/40 gap-1">
+            <div className="flex items-center bg-glass-100/30 border border-glass-border-light backdrop-blur-md p-1 gap-1 rounded-[12px]">
                 <button
                     onClick={() => setMode("pan")}
                     className={`${btnBase} ${mode === "pan" ? active : inactive}`}
@@ -142,7 +142,7 @@ function CameraToolbar({
             </div>
 
             {/* Zoom */}
-            <div className="flex items-center bg-slate-900/70 backdrop-blur-md rounded-xl p-1 border border-slate-700/40 gap-1">
+            <div className="flex items-center bg-glass-100/30 border border-glass-border-light backdrop-blur-md p-1 gap-1 rounded-[12px]">
                 <button
                     onClick={onZoomIn}
                     className={`${btnBase} ${inactive}`}
@@ -166,7 +166,7 @@ function CameraToolbar({
             {/* Reset */}
             <button
                 onClick={onReset}
-                className={`${btnBase} ${inactive}`}
+                className={`${btnBase} ${inactive} bg-glass-100/30 border border-glass-border-light backdrop-blur-md`}
                 title="Reset camera"
             >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -223,12 +223,12 @@ export function Scene() {
 
     if (contextLost) {
         return (
-            <div className="w-full h-full flex items-center justify-center bg-slate-950 text-slate-400">
-                <div className="text-center">
-                    <p className="text-lg mb-2">WebGL context lost</p>
+            <div className="w-full h-full flex items-center justify-center bg-[#020617] text-slate-300">
+                <div className="text-center font-sans tracking-tight">
+                    <p className="text-xl font-semibold mb-3 text-slate-200">WebGL context lost</p>
                     <button
                         onClick={() => setContextLost(false)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
+                        className="px-4 py-2 bg-glass-100/30 text-white rounded-[12px] border border-glass-border-light hover:bg-glass-100/50 transition-colors font-medium"
                     >
                         Reload 3D View
                     </button>
@@ -238,7 +238,7 @@ export function Scene() {
     }
 
     return (
-        <div className="relative w-full h-full bg-slate-950" ref={canvasContainerRef}>
+        <div className="relative w-full h-full bg-[#020617]" ref={canvasContainerRef}>
             {/* 3D Canvas */}
             <Canvas
                 shadows
@@ -265,27 +265,31 @@ export function Scene() {
                         resetKey={resetKey}
                     />
 
-                    {/* Lighting */}
-                    <ambientLight intensity={0.4} />
-                    <pointLight position={[8, 12, 8]} intensity={1.2} castShadow color="#e0e7ff" />
-                    <pointLight position={[-8, 8, -4]} intensity={0.5} color="#818cf8" />
+                    {/* Lighting - flatter setup for Toon material */}
+                    <ambientLight intensity={1.5} />
                     <directionalLight
-                        position={[-3, 10, 5]}
-                        intensity={0.5}
+                        position={[-5, 12, 8]}
+                        intensity={2.0}
                         castShadow
-                        shadow-mapSize={[1024, 1024]}
-                        color="#f0f0ff"
+                        shadow-mapSize={[2048, 2048]}
+                        shadow-bias={-0.0005}
+                        color="#ffffff"
+                    />
+                    <directionalLight
+                        position={[5, 8, -5]}
+                        intensity={0.8}
+                        color="#f8fafc"
                     />
 
                     {/* Grid floor */}
                     <Grid
                         infiniteGrid
-                        fadeDistance={80}
-                        fadeStrength={6}
+                        fadeDistance={60}
+                        fadeStrength={3}
                         cellSize={1}
                         sectionSize={5}
-                        sectionColor="#1e3a5f"
-                        cellColor="#0f1f38"
+                        sectionColor="#1e293b"
+                        cellColor="#0f172a"
                     />
 
                     {/* Universal Visualization */}
@@ -299,7 +303,7 @@ export function Scene() {
                         </group>
                     )}
 
-                    <color attach="background" args={["#020617"]} />
+                    <color attach="background" args={["#faf9f6"]} />
                 </Suspense>
             </Canvas>
 
@@ -313,7 +317,7 @@ export function Scene() {
             />
 
             {/* Hint text */}
-            <div className="absolute top-2 left-2 z-10 text-[10px] text-slate-500/60 font-mono pointer-events-none select-none">
+            <div className="absolute top-2 left-2 z-10 text-[11px] text-pencil-500/70 font-kalam font-bold pointer-events-none select-none">
                 {cameraMode === "pan"
                     ? "LMB: Pan · RMB: Orbit · Scroll: Zoom"
                     : "LMB: Orbit · RMB: Pan · Scroll: Zoom"}

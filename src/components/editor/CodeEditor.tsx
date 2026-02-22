@@ -10,13 +10,13 @@ interface CodeEditorProps {
 
 export function CodeEditor({ code, language, onChange }: CodeEditorProps) {
     return (
-        <div className="w-full h-full border-r border-slate-800">
+        <div className="w-full h-full border-r border-cream-200">
             <Editor
                 height="100%"
                 defaultLanguage={language}
                 language={language}
                 value={code}
-                theme="vs-dark"
+                theme="light"
                 onChange={onChange}
                 options={{
                     minimap: { enabled: false },

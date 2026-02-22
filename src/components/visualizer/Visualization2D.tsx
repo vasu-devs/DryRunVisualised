@@ -12,24 +12,24 @@ interface Visualization2DProps {
 
 // ─── Color Palette ───────────────────────────────────────────
 const COLORS = {
-    bg: "#0f172a",
-    cardBg: "#1e293b",
-    cardBorder: "#334155",
-    text: "#e2e8f0",
-    textDim: "#94a3b8",
-    textMuted: "#64748b",
-    accent: "#3b82f6",
-    accentDim: "#1d4ed8",
-    pointer: "#f59e0b",
-    pointerBg: "#78350f",
-    changed: "#22c55e",
-    changedBg: "#052e16",
-    highlight: "#a855f7",
-    highlightBg: "#3b0764",
-    danger: "#ef4444",
-    cellDefault: "#1e293b",
-    cellHighlight: "#7c3aed",
-    cellPointer: "#d97706",
+    bg: "transparent",
+    cardBg: "rgba(255, 255, 255, 0.03)",
+    cardBorder: "rgba(255, 255, 255, 0.1)",
+    text: "var(--foreground)",
+    textDim: "var(--slate-300)",
+    textMuted: "var(--slate-500)",
+    accent: "var(--blue-400)",
+    accentDim: "var(--blue-500)",
+    pointer: "var(--blue-500)",
+    pointerBg: "rgba(59, 130, 246, 0.2)",
+    changed: "var(--foreground)",
+    changedBg: "rgba(74, 222, 128, 0.2)",
+    highlight: "var(--foreground)",
+    highlightBg: "rgba(250, 204, 21, 0.2)",
+    danger: "var(--hl-red)",
+    cellDefault: "rgba(255, 255, 255, 0.05)",
+    cellHighlight: "rgba(250, 204, 21, 0.3)",
+    cellPointer: "rgba(59, 130, 246, 0.3)",
 };
 
 /**
@@ -117,20 +117,21 @@ function ArrayRow({
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
-                marginBottom: 4,
+                marginBottom: 6,
             }}>
                 <span style={{
                     color: isPrimary ? COLORS.accent : COLORS.textDim,
-                    fontSize: 12,
-                    fontWeight: isPrimary ? 700 : 500,
-                    fontFamily: "monospace",
+                    fontSize: 14,
+                    fontWeight: isPrimary ? 600 : 500,
+                    fontFamily: "var(--font-sans), sans-serif",
                     letterSpacing: "0.5px",
                 }}>
                     {name}
                 </span>
                 <span style={{
                     color: COLORS.textMuted,
-                    fontSize: 10,
+                    fontSize: 12,
+                    fontFamily: "var(--font-sans), sans-serif",
                 }}>
                     [{data.length}]
                 </span>
@@ -152,14 +153,14 @@ function ArrayRow({
                             {isPointed && (
                                 <div style={{ display: "flex", gap: 2, minHeight: 18 }}>
                                     {pointedBy.map(p => (
-                                        <span key={p.name} style={{
-                                            fontSize: 9,
-                                            fontWeight: 700,
-                                            color: p.color,
-                                            fontFamily: "monospace",
-                                            padding: "1px 4px",
-                                            borderRadius: 3,
-                                            background: `${p.color}20`,
+                                        <span key={p.name} className="glass-highlight" style={{
+                                            fontSize: 11,
+                                            fontWeight: 600,
+                                            color: COLORS.text,
+                                            fontFamily: "var(--font-sans), sans-serif",
+                                            padding: "2px 6px",
+                                            border: `1px solid ${p.color}`,
+                                            boxShadow: `0 0 8px ${p.color}40`,
                                         }}>
                                             {p.name}
                                         </span>
@@ -169,7 +170,7 @@ function ArrayRow({
                             {!isPointed && <div style={{ minHeight: 18 }} />}
 
                             {/* Cell */}
-                            <div style={{
+                            <div className="glass-box" style={{
                                 minWidth: cellW,
                                 height: cellHeight,
                                 display: "flex",
@@ -177,24 +178,22 @@ function ArrayRow({
                                 justifyContent: "center",
                                 padding: "0 6px",
                                 background: isPointed
-                                    ? `${pointedBy[0].color}30`
+                                    ? COLORS.cellPointer
                                     : changed
                                         ? COLORS.changedBg
                                         : COLORS.cellDefault,
-                                border: `2px solid ${isPointed
+                                border: `1px solid ${isPointed
                                     ? pointedBy[0].color
                                     : changed
                                         ? COLORS.changed
                                         : COLORS.cardBorder
                                     }`,
-                                borderRadius: 6,
-                                transition: "all 0.2s ease",
                             }}>
                                 <span style={{
                                     color: changed ? COLORS.changed : COLORS.text,
-                                    fontSize: baseFontSize,
-                                    fontWeight: changed ? 700 : 500,
-                                    fontFamily: "monospace",
+                                    fontSize: baseFontSize + 2,
+                                    fontWeight: changed ? 600 : 500,
+                                    fontFamily: "var(--font-sans), sans-serif",
                                     whiteSpace: "nowrap",
                                 }}>
                                     {displayText}
@@ -203,9 +202,9 @@ function ArrayRow({
 
                             {/* Index below */}
                             <span style={{
-                                fontSize: 9,
+                                fontSize: 11,
                                 color: COLORS.textMuted,
-                                fontFamily: "monospace",
+                                fontFamily: "var(--font-sans), sans-serif",
                             }}>
                                 {idx}
                             </span>
@@ -235,12 +234,11 @@ function ScalarBadge({
         : JSON.stringify(value);
 
     return (
-        <div style={{
+        <div className="glass-box" style={{
             display: "inline-flex",
             alignItems: "center",
             gap: 6,
             padding: "4px 10px",
-            borderRadius: 6,
             background: changed
                 ? COLORS.changedBg
                 : isPointer
@@ -252,34 +250,34 @@ function ScalarBadge({
                     ? COLORS.pointer
                     : COLORS.cardBorder
                 }`,
-            transition: "all 0.2s ease",
         }}>
             <span style={{
-                fontSize: 11,
+                fontSize: 13,
                 color: isPointer ? COLORS.pointer : COLORS.textDim,
-                fontFamily: "monospace",
+                fontFamily: "var(--font-sans), sans-serif",
                 fontWeight: 600,
             }}>
                 {name}
             </span>
             <span style={{
-                fontSize: 10,
-                color: COLORS.textMuted,
+                fontSize: 12,
+                color: COLORS.textDim,
+                fontFamily: "var(--font-sans), sans-serif",
             }}>=</span>
             <span style={{
-                fontSize: 12,
+                fontSize: 14,
                 color: changed ? COLORS.changed : COLORS.text,
-                fontFamily: "monospace",
-                fontWeight: changed ? 700 : 500,
+                fontFamily: "var(--font-sans), sans-serif",
+                fontWeight: changed ? 600 : 500,
             }}>
                 {displayVal}
             </span>
             {changed && prevValue !== undefined && (
                 <span style={{
-                    fontSize: 9,
+                    fontSize: 11,
                     color: COLORS.textMuted,
-                    fontFamily: "monospace",
-                    textDecoration: "line-through",
+                    fontFamily: "var(--font-sans), sans-serif",
+                    textDecoration: "line-through opacity-50",
                 }}>
                     {String(prevValue)}
                 </span>
@@ -310,46 +308,46 @@ function LinkedListView2D({ name, values }: { name: string; values: unknown[] })
                 marginBottom: 6,
             }}>
                 <span style={{
-                    color: "#4ade80",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    fontFamily: "monospace",
+                    color: "var(--foreground)",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    fontFamily: "var(--font-sans), sans-serif",
                     letterSpacing: "0.5px",
                 }}>
                     {name}
                 </span>
                 <span style={{
                     color: COLORS.textMuted,
-                    fontSize: 10,
+                    fontSize: 12,
+                    fontFamily: "var(--font-sans), sans-serif",
                 }}>
                     linked list [{n}]
                 </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 0 }}>
                 {/* HEAD label */}
-                <span style={{
-                    fontSize: 9,
-                    fontWeight: 700,
-                    color: "#22c55e",
-                    fontFamily: "monospace",
+                <span className="glass-highlight" style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: COLORS.text,
+                    fontFamily: "var(--font-sans), sans-serif",
                     marginRight: 6,
-                    padding: "2px 5px",
-                    background: "#052e16",
-                    borderRadius: 4,
-                    border: "1px solid #166534",
+                    padding: "2px 8px",
+                    background: "rgba(74, 222, 128, 0.2)",
+                    borderRadius: "4px",
+                    border: "1px solid rgba(74, 222, 128, 0.4)",
                 }}>
                     HEAD
                 </span>
                 {values.map((val, idx) => (
                     <div key={idx} style={{ display: "flex", alignItems: "center" }}>
                         {/* Node box */}
-                        <div style={{
+                        <div className="glass-box" style={{
                             display: "flex",
                             alignItems: "stretch",
-                            border: `2px solid ${idx === 0 ? "#22c55e" : "#166534"}`,
-                            borderRadius: 6,
+                            border: `1px solid ${idx === 0 ? "rgba(255, 255, 255, 0.3)" : "rgba(255, 255, 255, 0.1)"}`,
                             overflow: "hidden",
-                            background: idx === 0 ? "#052e16" : COLORS.cardBg,
+                            background: idx === 0 ? "rgba(74, 222, 128, 0.15)" : COLORS.cardBg,
                         }}>
                             {/* val compartment */}
                             <div style={{
@@ -358,13 +356,13 @@ function LinkedListView2D({ name, values }: { name: string; values: unknown[] })
                                 alignItems: "center",
                                 justifyContent: "center",
                                 minWidth: 36,
-                                borderRight: "1px solid #16653480",
+                                borderRight: "1px solid rgba(255, 255, 255, 0.1)",
                             }}>
                                 <span style={{
-                                    color: "white",
-                                    fontSize: 13,
-                                    fontWeight: 700,
-                                    fontFamily: "monospace",
+                                    color: COLORS.text,
+                                    fontSize: 15,
+                                    fontWeight: 600,
+                                    fontFamily: "var(--font-sans), sans-serif",
                                 }}>
                                     {formatCellValue(val)}
                                 </span>
@@ -378,9 +376,9 @@ function LinkedListView2D({ name, values }: { name: string; values: unknown[] })
                                 minWidth: 20,
                             }}>
                                 <span style={{
-                                    color: idx === n - 1 ? "#ef4444" : "#4ade80",
-                                    fontSize: 11,
-                                    fontWeight: 700,
+                                    color: idx === n - 1 ? "rgba(255, 255, 255, 0.5)" : "rgba(255, 255, 255, 0.8)",
+                                    fontSize: 13,
+                                    fontWeight: 600,
                                 }}>
                                     {idx === n - 1 ? "∅" : "→"}
                                 </span>
@@ -389,10 +387,11 @@ function LinkedListView2D({ name, values }: { name: string; values: unknown[] })
                         {/* Arrow connecting to next */}
                         {idx < n - 1 && (
                             <span style={{
-                                color: "#4ade80",
-                                fontSize: 14,
-                                fontWeight: 700,
-                                margin: "0 2px",
+                                color: "rgba(255, 255, 255, 0.4)",
+                                fontSize: 16,
+                                fontWeight: 500,
+                                margin: "0 4px",
+                                fontFamily: "var(--font-sans), sans-serif",
                             }}>
                                 →
                             </span>
@@ -400,16 +399,16 @@ function LinkedListView2D({ name, values }: { name: string; values: unknown[] })
                     </div>
                 ))}
                 {/* NULL label */}
-                <span style={{
-                    fontSize: 9,
-                    fontWeight: 700,
-                    color: "#ef4444",
-                    fontFamily: "monospace",
+                <span className="glass-highlight" style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: COLORS.text,
+                    fontFamily: "var(--font-sans), sans-serif",
                     marginLeft: 6,
-                    padding: "2px 5px",
-                    background: "#1c0a0a",
-                    borderRadius: 4,
-                    border: "1px solid #7f1d1d",
+                    padding: "2px 8px",
+                    background: "rgba(248, 113, 113, 0.2)",
+                    borderRadius: "4px",
+                    border: "1px solid rgba(248, 113, 113, 0.4)",
                 }}>
                     NULL
                 </span>
@@ -440,9 +439,9 @@ function DictView({ name, data, visited, queue, current }: { name: string; data:
         <div style={{ marginBottom: 12 }}>
             <span style={{
                 color: COLORS.textDim,
-                fontSize: 12,
-                fontWeight: 600,
-                fontFamily: "monospace",
+                fontSize: 14,
+                fontWeight: 500,
+                fontFamily: "var(--font-sans), sans-serif",
             }}>
                 {name}
             </span>
@@ -455,11 +454,11 @@ function DictView({ name, data, visited, queue, current }: { name: string; data:
                 {entries.map(([k, v]) => (
                     <div key={k} style={{
                         padding: "3px 8px",
-                        borderRadius: 4,
+                        borderRadius: "15px 255px 15px 225px/255px 15px 225px 15px",
                         background: COLORS.cardBg,
-                        border: `1px solid ${COLORS.cardBorder}`,
-                        fontSize: 11,
-                        fontFamily: "monospace",
+                        border: `2px solid var(--color-pencil-800)`,
+                        fontSize: 13,
+                        fontFamily: "var(--font-kalam), cursive",
                     }}>
                         <span style={{ color: COLORS.accent }}>{k}</span>
                         <span style={{ color: COLORS.textMuted }}>: </span>
@@ -642,14 +641,16 @@ function GraphView2D({
     if (n === 0) return null;
 
     return (
-        <div style={{ marginBottom: 12 }}>
+        <div className="glass-panel" style={{ marginBottom: 16, padding: "12px", borderRadius: "12px" }}>
             <span style={{
                 color: COLORS.highlight,
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: 600,
-                fontFamily: "monospace",
+                fontFamily: "var(--font-sans), sans-serif",
+                marginBottom: 8,
+                display: "block",
             }}>
-                {name} <span style={{ color: COLORS.textMuted, fontWeight: 400 }}>(graph)</span>
+                {name} <span style={{ color: COLORS.textMuted, fontWeight: 500 }}>(graph)</span>
             </span>
             <svg
                 viewBox={`${bounds.x} ${bounds.y} ${bounds.w} ${bounds.h}`}
@@ -673,9 +674,12 @@ function GraphView2D({
                             key={`${from}-${to}`}
                             d={getEdgePath(fromPos, toPos)}
                             fill="none"
-                            stroke={isTraversed ? COLORS.changed : "#475569"}
-                            strokeWidth={isTraversed ? 2.5 : 1.5}
-                            opacity={isTraversed ? 1 : 0.45}
+                            stroke={isTraversed ? "var(--blue-400)" : "rgba(255, 255, 255, 0.2)"}
+                            strokeWidth={isTraversed ? 3 : 1.5}
+                            opacity={isTraversed ? 1 : 0.6}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{ transition: "stroke 0.3s ease, stroke-width 0.3s ease" }}
                         />
                     );
                 })}
@@ -683,17 +687,17 @@ function GraphView2D({
                 {nodeIds.map(id => {
                     const pos = layout.get(id);
                     if (!pos) return null;
-                    let fill = "#475569";
-                    let stroke = "#64748b";
-                    if (id === currentStr) { fill = "#d97706"; stroke = "#f59e0b"; }
-                    else if (visitedSet.has(id)) { fill = "#16a34a"; stroke = "#22c55e"; }
-                    else if (queueSet.has(id)) { fill = "#2563eb"; stroke = "#3b82f6"; }
+                    let fill = "rgba(15, 23, 42, 0.8)"; // dark slate
+                    let stroke = "rgba(255, 255, 255, 0.2)";
+                    if (id === currentStr) { fill = "rgba(250, 204, 21, 0.2)"; stroke = "var(--hl-yellow)"; }
+                    else if (visitedSet.has(id)) { fill = "rgba(74, 222, 128, 0.2)"; stroke = "var(--hl-green)"; }
+                    else if (queueSet.has(id)) { fill = "rgba(59, 130, 246, 0.2)"; stroke = "var(--blue-500)"; }
                     return (
-                        <g key={id}>
-                            <circle cx={pos.x} cy={pos.y} r={NODE_R} fill={fill} stroke={stroke} strokeWidth={2} />
+                        <g key={id} style={{ transition: "all 0.3s ease" }}>
+                            <circle cx={pos.x} cy={pos.y} r={NODE_R} fill={fill} stroke={stroke} strokeWidth={2} style={{ backdropFilter: "blur(4px)" }} />
                             <text
                                 x={pos.x} y={pos.y} textAnchor="middle" dominantBaseline="central"
-                                fill="white" fontSize={12} fontFamily="monospace" fontWeight={600}
+                                fill={COLORS.text} fontSize={13} fontFamily="var(--font-sans), sans-serif" fontWeight={600}
                             >
                                 {id}
                             </text>
@@ -707,8 +711,8 @@ function GraphView2D({
 
 // ─── Pointer Color Generator ──────────────────────────────────
 const POINTER_COLORS = [
-    "#f59e0b", "#ef4444", "#22c55e", "#a855f7",
-    "#06b6d4", "#ec4899", "#84cc16", "#f97316",
+    "#ea580c", "#dc2626", "#16a34a", "#9333ea",
+    "#0891b2", "#db2777", "#65a30d", "#d97706",
 ];
 
 function getPointerColor(idx: number): string {

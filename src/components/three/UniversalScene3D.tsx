@@ -23,7 +23,7 @@ function DraggableGroup({
     initialPosition?: [number, number, number];
 }) {
     const groupRef = useRef<THREE.Group>(null);
-    const { camera, gl } = useThree();
+    const { camera } = useThree();
     const [offset, setOffset] = useState<[number, number, number]>([0, 0, 0]);
     const dragState = useRef<{
         active: boolean;
@@ -70,11 +70,10 @@ function DraggableGroup({
         if (!dragState.current.active) return;
         const ne = e.nativeEvent as PointerEvent;
         const point = getWorldPoint(ne.clientX, ne.clientY);
-        const dx = point.x - dragState.current.startMouse.x;
-        const dy = point.y - dragState.current.startMouse.y;
+        // dx and dy are unused, removed
         setOffset([
-            dragState.current.startOffset[0] + dx,
-            dragState.current.startOffset[1] + dy,
+            dragState.current.startOffset[0] + (point.x - dragState.current.startMouse.x),
+            dragState.current.startOffset[1] + (point.y - dragState.current.startMouse.y),
             dragState.current.startOffset[2],
         ]);
     }, [getWorldPoint]);
@@ -465,12 +464,13 @@ function GridTile3D({
                 color="white"
                 anchorX="center"
                 anchorY="middle"
-                outlineWidth={0.008}
+                font="var(--font-sans)"
+                outlineWidth={0.005}
                 outlineColor="#020617"
             >
                 {displayText}
             </Text>
-        </group>
+        </group >
     );
 }
 
@@ -493,11 +493,12 @@ function DictView3D({
             {/* Dict name label */}
             <Text
                 position={[0, 0.8, 0]}
-                fontSize={0.28}
+                fontSize={0.26}
                 color="#38bdf8"
                 anchorX="center"
                 anchorY="middle"
-                outlineWidth={0.01}
+                font="var(--font-sans)"
+                outlineWidth={0.005}
                 outlineColor="#020617"
             >
                 {name}
@@ -526,11 +527,12 @@ function DictView3D({
                         </RoundedBox>
                         <Text
                             position={[0, 0, 0.32]}
-                            fontSize={0.16}
+                            fontSize={0.15}
                             color="#e2e8f0"
                             anchorX="center"
                             anchorY="middle"
                             maxWidth={1.3}
+                            font="var(--font-sans)"
                         >
                             {text}
                         </Text>
@@ -570,20 +572,20 @@ function Stack3D({
     // Detect newly pushed (last element added)
     const prevLen = prevItems ? prevItems.length : n;
     const justPushed = n > prevLen;
-    const justPopped = n < prevLen;
 
     return (
         <group position={[0, yPos, 0]}>
             {/* Label */}
             <Text
                 position={[0, (n + 1) * (CELL_H + GAP) + 0.6, 0]}
-                fontSize={0.34}
+                fontSize={0.3}
                 color="#2dd4bf"
                 anchorX="center"
                 anchorY="middle"
-                outlineWidth={0.018}
+                outlineWidth={0.01}
                 outlineColor="#020617"
-                fontWeight="bold"
+                fontWeight="600"
+                font="var(--font-sans)"
             >
                 {name} (stack) [{n}]
             </Text>
@@ -715,13 +717,14 @@ function Queue3D({
             {/* Label */}
             <Text
                 position={[0, CELL_H + 1.2, 0]}
-                fontSize={0.34}
+                fontSize={0.3}
                 color="#fb923c"
                 anchorX="center"
                 anchorY="middle"
-                outlineWidth={0.018}
+                outlineWidth={0.01}
                 outlineColor="#020617"
-                fontWeight="bold"
+                fontWeight="600"
+                font="var(--font-sans)"
             >
                 {name} (queue) [{n}]
             </Text>
@@ -733,6 +736,7 @@ function Queue3D({
                 color="#fdba74"
                 anchorX="center"
                 anchorY="middle"
+                font="var(--font-sans)"
             >
                 dequeue ← · → enqueue
             </Text>
@@ -832,7 +836,8 @@ function Queue3D({
                             color="white"
                             anchorX="center"
                             anchorY="middle"
-                            outlineWidth={0.01}
+                            font="var(--font-sans)"
+                            outlineWidth={0.005}
                             outlineColor="#020617"
                         >
                             {displayText}
@@ -891,13 +896,14 @@ function LinkedListView3D({
             {/* Label */}
             <Text
                 position={[0, NODE_H + 1.4, 0]}
-                fontSize={0.34}
+                fontSize={0.3}
                 color="#86efac"
                 anchorX="center"
                 anchorY="middle"
-                outlineWidth={0.018}
+                font="var(--font-sans)"
+                fontWeight="600"
+                outlineWidth={0.01}
                 outlineColor="#020617"
-                fontWeight="bold"
             >
                 {name} (linked list) [{n}]
             </Text>
@@ -917,11 +923,12 @@ function LinkedListView3D({
             {n > 0 && (
                 <Text
                     position={[-xCenter - 0.0, NODE_H + 0.55, 0]}
-                    fontSize={0.18}
+                    fontSize={0.16}
                     color="#22c55e"
                     anchorX="center"
                     anchorY="middle"
-                    fontWeight="bold"
+                    fontWeight="600"
+                    font="var(--font-sans)"
                 >
                     HEAD
                 </Text>
@@ -966,9 +973,10 @@ function LinkedListView3D({
                             color="white"
                             anchorX="center"
                             anchorY="middle"
-                            outlineWidth={0.01}
+                            font="var(--font-sans)"
+                            outlineWidth={0.005}
                             outlineColor="#020617"
-                            fontWeight="bold"
+                            fontWeight="600"
                         >
                             {displayText}
                         </Text>
@@ -1029,12 +1037,13 @@ function LinkedListView3D({
             {n > 0 && (
                 <group position={[(n - 1) * (NODE_W + GAP) - xCenter + NODE_W / 2 + GAP / 2 + 0.4, NODE_H / 2, 0]}>
                     <Text
-                        fontSize={0.22}
+                        fontSize={0.2}
                         color="#ef4444"
                         anchorX="center"
                         anchorY="middle"
-                        fontWeight="bold"
-                        outlineWidth={0.015}
+                        fontWeight="600"
+                        font="var(--font-sans)"
+                        outlineWidth={0.005}
                         outlineColor="#020617"
                     >
                         NULL
@@ -1303,8 +1312,10 @@ function GraphView3D({
                             color="white"
                             anchorX="center"
                             anchorY="middle"
-                            outlineWidth={0.015}
+                            font="var(--font-sans)"
+                            outlineWidth={0.005}
                             outlineColor="#020617"
+                            fontWeight="600"
                         >
                             {id}
                         </Text>

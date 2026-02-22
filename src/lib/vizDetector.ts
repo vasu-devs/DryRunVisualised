@@ -9,7 +9,7 @@
  *  5. None    — only scalars, no data structures
  */
 
-import { Trace, TraceStep } from "./interpreter/schema";
+import { Trace } from "./interpreter/schema";
 
 export type VizType = "search" | "graph" | "grid" | "array" | "none";
 

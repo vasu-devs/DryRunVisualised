@@ -299,7 +299,7 @@ const DEFAULT_EXAMPLE = "binary_search";
 export default function Home() {
   const [selectedExample, setSelectedExample] = useState(DEFAULT_EXAMPLE);
   const [code, setCode] = useState(EXAMPLES[DEFAULT_EXAMPLE].code);
-  const [language, setLanguage] = useState("python");
+  const [language] = useState("python");
   const [isExecuting, setIsExecuting] = useState(false);
   const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
   const setTrace = useTraceStore((state) => state.setTrace);
@@ -352,13 +352,13 @@ export default function Home() {
   };
 
   return (
-    <main className="flex flex-col h-screen bg-slate-950 text-slate-100 overflow-hidden">
+    <main className="min-h-screen bg-transparent text-slate-100 p-8 flex flex-col font-sans selection:bg-blue-500/30">
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-3 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md">
+      <header className="mb-8 flex items-center justify-between px-6 py-3 border-b border-glass-border-light bg-glass-100/50 backdrop-blur-md z-10 relative rounded-xl shadow-lg">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white text-sm">DR</div>
-          <h1 className="text-lg font-bold tracking-tight">
-            Dry Runner <span className="text-slate-500 font-normal ml-1">3D DSA Visualizer</span>
+          <div className="w-8 h-8 glass-box flex items-center justify-center font-bold text-slate-100 text-sm">DR</div>
+          <h1 className="text-xl font-bold tracking-tight text-slate-50">
+            Dry Runner <span className="text-slate-400 font-normal italic text-base ml-2">3D DSA Visualizer</span>
           </h1>
         </div>
         <div className="flex items-center gap-3">
@@ -366,7 +366,7 @@ export default function Home() {
           <select
             value={selectedExample}
             onChange={(e) => handleExampleChange(e.target.value)}
-            className="bg-slate-900 border border-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none"
+            className="glass-box bg-glass-100 text-slate-100 text-sm px-3 py-1.5 focus:outline-none cursor-pointer appearance-none transition-all hover:bg-glass-200"
             style={{ minWidth: 160 }}
           >
             <optgroup label="Search">
@@ -390,72 +390,76 @@ export default function Home() {
               <option value="nqueens">N-Queens</option>
             </optgroup>
           </select>
-          <span className="px-2 py-1 rounded bg-slate-900 border border-slate-800 text-xs uppercase tracking-widest text-slate-500">{language}</span>
+          <span className="px-2 py-1 glass-box bg-glass-200 text-[12px] font-bold uppercase tracking-widest text-slate-300">{language}</span>
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="flex-1 flex min-h-0">
-        {/* Left Side: Editor + Controls */}
-        <div className="w-[450px] flex flex-col border-r border-slate-800">
+      {/* Main Grid: Code + Logs (Left) | Visualizer + Info (Right) */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-0">
+
+        {/* Left Column: Code Editor & Execution Logs */}
+        <div className="lg:col-span-5 flex flex-col gap-8 min-h-0 glass-panel z-10 relative">
           <Toolbar onExecute={handleExecute} isExecuting={isExecuting} />
           <div className="flex-1 min-h-0">
             <CodeEditor code={code} language={language} onChange={(val) => setCode(val || "")} />
           </div>
         </div>
 
-        {/* Right Side: Visualization */}
-        <div className="flex-1 relative flex flex-col">
-          {/* 2D/3D Toggle */}
-          <div className="flex items-center gap-2 px-4 py-2 border-b border-slate-800 bg-slate-950/60">
-            <button
-              onClick={() => setViewMode("2d")}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${viewMode === "2d"
-                ? "bg-blue-600 text-white"
-                : "bg-slate-800 text-slate-400 hover:text-slate-200"
-                }`}
-            >
-              2D View
-            </button>
-            <button
-              onClick={() => setViewMode("3d")}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${viewMode === "3d"
-                ? "bg-blue-600 text-white"
-                : "bg-slate-800 text-slate-400 hover:text-slate-200"
-                }`}
-            >
-              3D View
-            </button>
-            <span className="ml-2 text-xs text-slate-500">|</span>
-            <span className="text-xs text-slate-500">
-              {vizCtx.type !== "none" ? `Detected: ${vizCtx.type}` : "Waiting for code..."}
-              {vizCtx.primaryVar ? ` • primary: ${vizCtx.primaryVar}` : ""}
-            </span>
-          </div>
+        {/* Right Column: Visualization & Context Panels */}
+        <div className="lg:col-span-7 flex flex-col gap-8 min-h-0">
 
-          {/* Visualization Area */}
-          <div className="flex-1 min-h-0">
-            {viewMode === "3d" ? (
-              <Scene />
-            ) : (
-              currentStep ? (
-                <Visualization2D step={currentStep} prevStep={prevStep} vizCtx={vizCtx} />
+          {/* Top Panel: Data Variables */}
+          <div className="h-32 shrink-0 glass-panel p-4 flex flex-col relative overflow-hidden group">
+            <div className="flex items-center gap-2 px-4 py-2 border-b border-glass-border-light bg-glass-100 z-10 relative rounded-t-lg">
+              <button
+                onClick={() => setViewMode("2d")}
+                className={`px-3 py-1 text-sm font-bold transition-all rounded ${viewMode === "2d"
+                  ? "glass-highlight text-white"
+                  : "text-slate-400 hover:text-slate-200"
+                  }`}
+              >
+                2D View
+              </button>
+              <button
+                onClick={() => setViewMode("3d")}
+                className={`px-3 py-1 text-sm font-bold transition-all rounded ${viewMode === "3d"
+                  ? "glass-highlight text-white"
+                  : "text-slate-400 hover:text-slate-200"
+                  }`}
+              >
+                3D View
+              </button>
+              <span className="ml-2 text-sm text-slate-500">|</span>
+              <span className="text-sm text-slate-300 font-medium font-sans">
+                {vizCtx.type !== "none" ? `Detected: ${vizCtx.type}` : "Waiting for code..."}
+                {vizCtx.primaryVar ? ` • primary: ${vizCtx.primaryVar}` : ""}
+              </span>
+            </div>
+
+            {/* Visualization Area */}
+            <div className="flex-1 min-h-0">
+              {viewMode === "3d" ? (
+                <Scene />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-slate-600 text-sm">
-                  Run your code to see the visualization
-                </div>
-              )
-            )}
+                currentStep ? (
+                  <Visualization2D step={currentStep} prevStep={prevStep} vizCtx={vizCtx} />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-500 text-lg font-bold">
+                    Run your code to see the visualization
+                  </div>
+                )
+              )}
+            </div>
+            {/* Iteration slider — under visualization for easy access */}
+            <StepSlider />
           </div>
-          {/* Iteration slider — under visualization for easy access */}
-          <StepSlider />
-        </div>
-      </div>
 
-      {/* Bottom Panel */}
-      <div className="h-48 border-t border-slate-800 flex overflow-hidden">
-        <VariablePanel />
-        <StdoutPanel />
+          {/* Data Structure Explanations */}
+          <div className="h-40 shrink-0 glass-panel p-4 relative overflow-hidden group">
+            <VariablePanel />
+            <StdoutPanel />
+          </div>
+        </div>
       </div>
     </main>
   );

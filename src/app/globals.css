@@ -1,8 +1,24 @@
 @import "tailwindcss";
 
+@theme {
+  --color-glass-100: rgba(255, 255, 255, 0.03);
+  --color-glass-200: rgba(255, 255, 255, 0.05);
+  --color-glass-300: rgba(255, 255, 255, 0.08);
+  --color-glass-400: rgba(255, 255, 255, 0.12);
+  --color-glass-border-light: rgba(255, 255, 255, 0.1);
+  --color-glass-border-strong: rgba(255, 255, 255, 0.2);
+  --color-glass-shadow: rgba(0, 0, 0, 0.4);
+  /* Highlighters */
+  --color-hl-yellow: rgba(250, 204, 21, 0.3);
+  --color-hl-green: rgba(74, 222, 128, 0.3);
+  --color-hl-red: rgba(248, 113, 113, 0.3);
+  --color-hl-blue: rgba(96, 165, 250, 0.3);
+}
+
 :root {
-  --background: #020617;
-  --foreground: #f8fafc;
+  --background: #09090b;
+  /* Deep zinc-950 */
+  --foreground: #fafafa;
   --blue-600: #2563eb;
   --blue-500: #3b82f6;
   --slate-950: #020617;
@@ -19,13 +35,80 @@ body {
   background-color: var(--background);
   color: var(--foreground);
   margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans), sans-serif;
+  /* Subtle mesh gradient background for glassmorphism pop */
+  background-image: radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225, 39%, 30%, 0.2) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 0.2) 0, transparent 50%);
+  background-attachment: fixed;
 }
 
-.glass-card {
-  background-color: rgba(15, 23, 42, 0.5);
+
+/* Glassmorphism CSS utilities */
+
+.glass-box {
+  background-color: var(--color-glass-100);
+  border: 1px solid var(--color-glass-border-light);
+  border-radius: 8px;
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(30, 41, 59, 0.5);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 6px -1px var(--color-glass-shadow), 0 2px 4px -2px var(--color-glass-shadow);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-box:hover {
+  background-color: var(--color-glass-200);
+  border-color: var(--color-glass-border-strong);
+  box-shadow: 0 10px 15px -3px var(--color-glass-shadow), 0 4px 6px -4px var(--color-glass-shadow);
+  transform: translateY(-2px);
+}
+
+.glass-highlight {
+  background: var(--color-hl-yellow);
+  border-radius: 4px;
+}
+
+.glass-button {
+  background: var(--color-glass-200);
+  border: 1px solid var(--color-glass-border-light);
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: all 0.2s ease-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.glass-button:hover {
+  background: var(--color-glass-300);
+  border-color: var(--color-glass-border-strong);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.glass-button:active {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.glass-panel {
+  background-color: var(--color-glass-100);
+  border: 1px solid var(--color-glass-border-light);
+  border-radius: 12px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  pointer-events: none;
 }
 
 /* Custom Scrollbar */

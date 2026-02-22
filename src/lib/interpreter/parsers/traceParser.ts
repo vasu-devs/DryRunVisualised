@@ -1,11 +1,11 @@
-import { Trace, TraceStepSchema } from "../schema";
+import { Trace, TraceStep, TraceStepSchema } from "../schema";
 
 /**
  * Parses raw execution output from the backend.
  * Extracts lines prefixed with __TRACE__ and validates them.
  */
 export const parseTrace = (stdout: string): Trace => {
-    const steps: any[] = [];
+    const steps: TraceStep[] = [];
     const lines = stdout.split('\n');
 
     for (const line of lines) {

@@ -28,9 +28,9 @@ export async function POST(req: NextRequest) {
         const trace = parseTrace(result.stdout);
 
         return NextResponse.json({ trace, rawStdout: result.stdout, stderr: result.stderr });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Execution error:", error);
-        return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+        return NextResponse.json({ error: (error as Error).message || "Internal Server Error" }, { status: 500 });
     }
 }
 

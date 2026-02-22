@@ -14,11 +14,12 @@ export interface ExecutionResult {
 }
 
 export const executeLocal = (code: string): Promise<ExecutionResult> => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve, _reject) => {
         const timeout = 15000; // 15 second timeout
 
-        const proc = execFile(
-            "python3",
+        const pyCmd = process.platform === "win32" ? "python" : "python3";
+        execFile(
+            pyCmd,
             ["-c", code],
             {
                 timeout,
