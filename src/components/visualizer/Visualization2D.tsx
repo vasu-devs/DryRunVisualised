@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { TraceStep } from "@/lib/interpreter/schema";
 import { VizContext } from "@/lib/vizDetector";
+import { useGraphLayout } from "@/hooks/useGraphLayout";
 
 interface Visualization2DProps {
     step: TraceStep;
@@ -13,23 +14,23 @@ interface Visualization2DProps {
 // ─── Color Palette ───────────────────────────────────────────
 const COLORS = {
     bg: "transparent",
-    cardBg: "rgba(255, 255, 255, 0.03)",
-    cardBorder: "rgba(255, 255, 255, 0.1)",
-    text: "var(--foreground)",
-    textDim: "var(--slate-300)",
-    textMuted: "var(--slate-500)",
-    accent: "var(--blue-400)",
-    accentDim: "var(--blue-500)",
-    pointer: "var(--blue-500)",
-    pointerBg: "rgba(59, 130, 246, 0.2)",
-    changed: "var(--foreground)",
-    changedBg: "rgba(74, 222, 128, 0.2)",
-    highlight: "var(--foreground)",
-    highlightBg: "rgba(250, 204, 21, 0.2)",
-    danger: "var(--hl-red)",
-    cellDefault: "rgba(255, 255, 255, 0.05)",
-    cellHighlight: "rgba(250, 204, 21, 0.3)",
-    cellPointer: "rgba(59, 130, 246, 0.3)",
+    cardBg: "#ffffff",
+    cardBorder: "#e8e2d4",
+    text: "#302a1e",
+    textDim: "#615541",
+    textMuted: "#a8967f",
+    accent: "#615541",
+    accentDim: "#75664d",
+    pointer: "#ea580c",
+    pointerBg: "#ffedd5",
+    changed: "#16a34a",
+    changedBg: "#dcfce7",
+    highlight: "#9333ea",
+    highlightBg: "#f3e8ff",
+    danger: "#dc2626",
+    cellDefault: "#ffffff",
+    cellHighlight: "#f3e8ff",
+    cellPointer: "#ffedd5",
 };
 
 /**
@@ -117,21 +118,20 @@ function ArrayRow({
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
-                marginBottom: 6,
+                marginBottom: 4,
             }}>
                 <span style={{
                     color: isPrimary ? COLORS.accent : COLORS.textDim,
-                    fontSize: 14,
-                    fontWeight: isPrimary ? 600 : 500,
-                    fontFamily: "var(--font-sans), sans-serif",
+                    fontSize: 12,
+                    fontWeight: isPrimary ? 700 : 500,
+                    fontFamily: "monospace",
                     letterSpacing: "0.5px",
                 }}>
                     {name}
                 </span>
                 <span style={{
                     color: COLORS.textMuted,
-                    fontSize: 12,
-                    fontFamily: "var(--font-sans), sans-serif",
+                    fontSize: 10,
                 }}>
                     [{data.length}]
                 </span>
@@ -153,14 +153,14 @@ function ArrayRow({
                             {isPointed && (
                                 <div style={{ display: "flex", gap: 2, minHeight: 18 }}>
                                     {pointedBy.map(p => (
-                                        <span key={p.name} className="glass-highlight" style={{
-                                            fontSize: 11,
-                                            fontWeight: 600,
-                                            color: COLORS.text,
-                                            fontFamily: "var(--font-sans), sans-serif",
-                                            padding: "2px 6px",
-                                            border: `1px solid ${p.color}`,
-                                            boxShadow: `0 0 8px ${p.color}40`,
+                                        <span key={p.name} style={{
+                                            fontSize: 9,
+                                            fontWeight: 700,
+                                            color: p.color,
+                                            fontFamily: "monospace",
+                                            padding: "1px 4px",
+                                            borderRadius: 3,
+                                            background: `${p.color}20`,
                                         }}>
                                             {p.name}
                                         </span>
@@ -170,7 +170,7 @@ function ArrayRow({
                             {!isPointed && <div style={{ minHeight: 18 }} />}
 
                             {/* Cell */}
-                            <div className="glass-box" style={{
+                            <div style={{
                                 minWidth: cellW,
                                 height: cellHeight,
                                 display: "flex",
@@ -178,22 +178,24 @@ function ArrayRow({
                                 justifyContent: "center",
                                 padding: "0 6px",
                                 background: isPointed
-                                    ? COLORS.cellPointer
+                                    ? `${pointedBy[0].color}30`
                                     : changed
                                         ? COLORS.changedBg
                                         : COLORS.cellDefault,
-                                border: `1px solid ${isPointed
+                                border: `2px solid ${isPointed
                                     ? pointedBy[0].color
                                     : changed
                                         ? COLORS.changed
                                         : COLORS.cardBorder
                                     }`,
+                                borderRadius: 6,
+                                transition: "all 0.2s ease",
                             }}>
                                 <span style={{
                                     color: changed ? COLORS.changed : COLORS.text,
-                                    fontSize: baseFontSize + 2,
-                                    fontWeight: changed ? 600 : 500,
-                                    fontFamily: "var(--font-sans), sans-serif",
+                                    fontSize: baseFontSize,
+                                    fontWeight: changed ? 700 : 500,
+                                    fontFamily: "monospace",
                                     whiteSpace: "nowrap",
                                 }}>
                                     {displayText}
@@ -202,9 +204,9 @@ function ArrayRow({
 
                             {/* Index below */}
                             <span style={{
-                                fontSize: 11,
+                                fontSize: 9,
                                 color: COLORS.textMuted,
-                                fontFamily: "var(--font-sans), sans-serif",
+                                fontFamily: "monospace",
                             }}>
                                 {idx}
                             </span>
@@ -234,11 +236,12 @@ function ScalarBadge({
         : JSON.stringify(value);
 
     return (
-        <div className="glass-box" style={{
+        <div style={{
             display: "inline-flex",
             alignItems: "center",
             gap: 6,
             padding: "4px 10px",
+            borderRadius: 6,
             background: changed
                 ? COLORS.changedBg
                 : isPointer
@@ -250,34 +253,34 @@ function ScalarBadge({
                     ? COLORS.pointer
                     : COLORS.cardBorder
                 }`,
+            transition: "all 0.2s ease",
         }}>
             <span style={{
-                fontSize: 13,
+                fontSize: 11,
                 color: isPointer ? COLORS.pointer : COLORS.textDim,
-                fontFamily: "var(--font-sans), sans-serif",
+                fontFamily: "monospace",
                 fontWeight: 600,
             }}>
                 {name}
             </span>
             <span style={{
-                fontSize: 12,
-                color: COLORS.textDim,
-                fontFamily: "var(--font-sans), sans-serif",
+                fontSize: 10,
+                color: COLORS.textMuted,
             }}>=</span>
             <span style={{
-                fontSize: 14,
+                fontSize: 12,
                 color: changed ? COLORS.changed : COLORS.text,
-                fontFamily: "var(--font-sans), sans-serif",
-                fontWeight: changed ? 600 : 500,
+                fontFamily: "monospace",
+                fontWeight: changed ? 700 : 500,
             }}>
                 {displayVal}
             </span>
             {changed && prevValue !== undefined && (
                 <span style={{
-                    fontSize: 11,
+                    fontSize: 9,
                     color: COLORS.textMuted,
-                    fontFamily: "var(--font-sans), sans-serif",
-                    textDecoration: "line-through opacity-50",
+                    fontFamily: "monospace",
+                    textDecoration: "line-through",
                 }}>
                     {String(prevValue)}
                 </span>
@@ -308,46 +311,46 @@ function LinkedListView2D({ name, values }: { name: string; values: unknown[] })
                 marginBottom: 6,
             }}>
                 <span style={{
-                    color: "var(--foreground)",
-                    fontSize: 14,
-                    fontWeight: 600,
-                    fontFamily: "var(--font-sans), sans-serif",
+                    color: "#16a34a",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    fontFamily: "monospace",
                     letterSpacing: "0.5px",
                 }}>
                     {name}
                 </span>
                 <span style={{
                     color: COLORS.textMuted,
-                    fontSize: 12,
-                    fontFamily: "var(--font-sans), sans-serif",
+                    fontSize: 10,
                 }}>
                     linked list [{n}]
                 </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 0 }}>
                 {/* HEAD label */}
-                <span className="glass-highlight" style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: COLORS.text,
-                    fontFamily: "var(--font-sans), sans-serif",
+                <span style={{
+                    fontSize: 9,
+                    fontWeight: 700,
+                    color: "#15803d",
+                    fontFamily: "monospace",
                     marginRight: 6,
-                    padding: "2px 8px",
-                    background: "rgba(74, 222, 128, 0.2)",
-                    borderRadius: "4px",
-                    border: "1px solid rgba(74, 222, 128, 0.4)",
+                    padding: "2px 5px",
+                    background: "#dcfce7",
+                    borderRadius: 4,
+                    border: "1px solid #86efac",
                 }}>
                     HEAD
                 </span>
                 {values.map((val, idx) => (
                     <div key={idx} style={{ display: "flex", alignItems: "center" }}>
                         {/* Node box */}
-                        <div className="glass-box" style={{
+                        <div style={{
                             display: "flex",
                             alignItems: "stretch",
-                            border: `1px solid ${idx === 0 ? "rgba(255, 255, 255, 0.3)" : "rgba(255, 255, 255, 0.1)"}`,
+                            border: `2px solid ${idx === 0 ? "#22c55e" : "#bbf7d0"}`,
+                            borderRadius: 6,
                             overflow: "hidden",
-                            background: idx === 0 ? "rgba(74, 222, 128, 0.15)" : COLORS.cardBg,
+                            background: idx === 0 ? "#dcfce7" : COLORS.cardBg,
                         }}>
                             {/* val compartment */}
                             <div style={{
@@ -356,13 +359,13 @@ function LinkedListView2D({ name, values }: { name: string; values: unknown[] })
                                 alignItems: "center",
                                 justifyContent: "center",
                                 minWidth: 36,
-                                borderRight: "1px solid rgba(255, 255, 255, 0.1)",
+                                borderRight: "1px solid #bbf7d0",
                             }}>
                                 <span style={{
                                     color: COLORS.text,
-                                    fontSize: 15,
-                                    fontWeight: 600,
-                                    fontFamily: "var(--font-sans), sans-serif",
+                                    fontSize: 13,
+                                    fontWeight: 700,
+                                    fontFamily: "monospace",
                                 }}>
                                     {formatCellValue(val)}
                                 </span>
@@ -376,9 +379,9 @@ function LinkedListView2D({ name, values }: { name: string; values: unknown[] })
                                 minWidth: 20,
                             }}>
                                 <span style={{
-                                    color: idx === n - 1 ? "rgba(255, 255, 255, 0.5)" : "rgba(255, 255, 255, 0.8)",
-                                    fontSize: 13,
-                                    fontWeight: 600,
+                                    color: idx === n - 1 ? "#dc2626" : "#16a34a",
+                                    fontSize: 11,
+                                    fontWeight: 700,
                                 }}>
                                     {idx === n - 1 ? "∅" : "→"}
                                 </span>
@@ -387,11 +390,10 @@ function LinkedListView2D({ name, values }: { name: string; values: unknown[] })
                         {/* Arrow connecting to next */}
                         {idx < n - 1 && (
                             <span style={{
-                                color: "rgba(255, 255, 255, 0.4)",
-                                fontSize: 16,
-                                fontWeight: 500,
-                                margin: "0 4px",
-                                fontFamily: "var(--font-sans), sans-serif",
+                                color: "#16a34a",
+                                fontSize: 14,
+                                fontWeight: 700,
+                                margin: "0 2px",
                             }}>
                                 →
                             </span>
@@ -399,16 +401,16 @@ function LinkedListView2D({ name, values }: { name: string; values: unknown[] })
                     </div>
                 ))}
                 {/* NULL label */}
-                <span className="glass-highlight" style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: COLORS.text,
-                    fontFamily: "var(--font-sans), sans-serif",
+                <span style={{
+                    fontSize: 9,
+                    fontWeight: 700,
+                    color: "#dc2626",
+                    fontFamily: "monospace",
                     marginLeft: 6,
-                    padding: "2px 8px",
-                    background: "rgba(248, 113, 113, 0.2)",
-                    borderRadius: "4px",
-                    border: "1px solid rgba(248, 113, 113, 0.4)",
+                    padding: "2px 5px",
+                    background: "#fee2e2",
+                    borderRadius: 4,
+                    border: "1px solid #fca5a5",
                 }}>
                     NULL
                 </span>
@@ -439,9 +441,9 @@ function DictView({ name, data, visited, queue, current }: { name: string; data:
         <div style={{ marginBottom: 12 }}>
             <span style={{
                 color: COLORS.textDim,
-                fontSize: 14,
-                fontWeight: 500,
-                fontFamily: "var(--font-sans), sans-serif",
+                fontSize: 12,
+                fontWeight: 600,
+                fontFamily: "monospace",
             }}>
                 {name}
             </span>
@@ -454,11 +456,11 @@ function DictView({ name, data, visited, queue, current }: { name: string; data:
                 {entries.map(([k, v]) => (
                     <div key={k} style={{
                         padding: "3px 8px",
-                        borderRadius: "15px 255px 15px 225px/255px 15px 225px 15px",
+                        borderRadius: 4,
                         background: COLORS.cardBg,
-                        border: `2px solid var(--color-pencil-800)`,
-                        fontSize: 13,
-                        fontFamily: "var(--font-kalam), cursive",
+                        border: `1px solid ${COLORS.cardBorder}`,
+                        fontSize: 11,
+                        fontFamily: "monospace",
                     }}>
                         <span style={{ color: COLORS.accent }}>{k}</span>
                         <span style={{ color: COLORS.textMuted }}>: </span>
@@ -484,125 +486,28 @@ function GraphView2D({
     queue?: unknown[];
     current?: unknown;
 }) {
-    const nodeIds = Object.keys(adj);
-    const n = nodeIds.length;
     const visitedSet = new Set((visited || []).map(String));
     const queueSet = new Set((queue || []).map(String));
     const currentStr = current !== undefined ? String(current) : null;
 
-    // Force-directed layout
-    const layout = useMemo(() => {
-        if (n === 0) return new Map<string, { x: number; y: number }>();
+    // Use shared layout engine
+    const { layout, edges, nodes: nodeIds } = useGraphLayout(adj, 100, 200);
 
-        const SCALE = 100;
-        const positions: Record<string, { x: number; y: number }> = {};
-        nodeIds.forEach((id, i) => {
-            const angle = (2 * Math.PI * i) / n - Math.PI / 2;
-            positions[id] = {
-                x: Math.cos(angle) * SCALE,
-                y: Math.sin(angle) * SCALE,
-            };
-        });
-
-        // Build edges
-        const edgeSet = new Set<string>();
-        const edgeList: [string, string][] = [];
-        for (const [node, neighbors] of Object.entries(adj)) {
-            for (const neighbor of neighbors) {
-                const key = [node, String(neighbor)].sort().join("-");
-                if (!edgeSet.has(key)) {
-                    edgeSet.add(key);
-                    edgeList.push([node, String(neighbor)]);
-                }
-            }
-        }
-
-        // Force simulation
-        const REPULSION = 3000;
-        const SPRING_K = 0.05;
-        const IDEAL_LENGTH = SCALE * 0.8;
-        const DAMPING = 0.85;
-        const ITERATIONS = 150;
-
-        for (let iter = 0; iter < ITERATIONS; iter++) {
-            const forces: Record<string, { fx: number; fy: number }> = {};
-            for (const id of nodeIds) forces[id] = { fx: 0, fy: 0 };
-
-            // Repulsion
-            for (let i = 0; i < n; i++) {
-                for (let j = i + 1; j < n; j++) {
-                    const a = nodeIds[i], b = nodeIds[j];
-                    const dx = positions[b].x - positions[a].x;
-                    const dy = positions[b].y - positions[a].y;
-                    const dist = Math.sqrt(dx * dx + dy * dy) + 0.1;
-                    const force = REPULSION / (dist * dist);
-                    const fx = (dx / dist) * force;
-                    const fy = (dy / dist) * force;
-                    forces[a].fx -= fx; forces[a].fy -= fy;
-                    forces[b].fx += fx; forces[b].fy += fy;
-                }
-            }
-
-            // Spring attraction
-            for (const [a, b] of edgeList) {
-                const dx = positions[b].x - positions[a].x;
-                const dy = positions[b].y - positions[a].y;
-                const dist = Math.sqrt(dx * dx + dy * dy) + 0.1;
-                const displacement = dist - IDEAL_LENGTH;
-                const force = SPRING_K * displacement;
-                const fx = (dx / dist) * force;
-                const fy = (dy / dist) * force;
-                forces[a].fx += fx; forces[a].fy += fy;
-                forces[b].fx -= fx; forces[b].fy -= fy;
-            }
-
-            // Center gravity
-            for (const id of nodeIds) {
-                forces[id].fx -= positions[id].x * 0.005;
-                forces[id].fy -= positions[id].y * 0.005;
-            }
-
-            const cooling = 1 - iter / ITERATIONS;
-            for (const id of nodeIds) {
-                positions[id].x += forces[id].fx * DAMPING * cooling;
-                positions[id].y += forces[id].fy * DAMPING * cooling;
-            }
-        }
-
-        const result = new Map<string, { x: number; y: number }>();
-        for (const id of nodeIds) result.set(id, positions[id]);
-        return result;
-    }, [nodeIds, adj, n]);
-
-    // Compute bounding box
+    // Compute bounding box based on shared layout
     const bounds = useMemo(() => {
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
         layout.forEach(pos => {
             minX = Math.min(minX, pos.x); maxX = Math.max(maxX, pos.x);
             minY = Math.min(minY, pos.y); maxY = Math.max(maxY, pos.y);
         });
-        const padding = 30;
+        // Handle empty graph gracefully
+        if (minX === Infinity) return { x: 0, y: 0, w: 100, h: 100 };
+        const padding = 50;
         return {
             x: minX - padding, y: minY - padding,
             w: maxX - minX + padding * 2, h: maxY - minY + padding * 2,
         };
     }, [layout]);
-
-    // Edges with deduplication
-    const edges = useMemo(() => {
-        const e: { from: string; to: string }[] = [];
-        const seen = new Set<string>();
-        for (const [node, neighbors] of Object.entries(adj)) {
-            for (const neighbor of neighbors) {
-                const key = [node, String(neighbor)].sort().join("-");
-                if (!seen.has(key)) {
-                    seen.add(key);
-                    e.push({ from: node, to: String(neighbor) });
-                }
-            }
-        }
-        return e;
-    }, [adj]);
 
     // Graph center for edge curving
     const graphCenter = useMemo(() => {
@@ -638,19 +543,17 @@ function GraphView2D({
         return `M ${sx} ${sy} Q ${ctrlX} ${ctrlY} ${ex} ${ey}`;
     };
 
-    if (n === 0) return null;
+    if (nodeIds.length === 0) return null;
 
     return (
-        <div className="glass-panel" style={{ marginBottom: 16, padding: "12px", borderRadius: "12px" }}>
+        <div style={{ marginBottom: 12 }}>
             <span style={{
                 color: COLORS.highlight,
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: 600,
-                fontFamily: "var(--font-sans), sans-serif",
-                marginBottom: 8,
-                display: "block",
+                fontFamily: "monospace",
             }}>
-                {name} <span style={{ color: COLORS.textMuted, fontWeight: 500 }}>(graph)</span>
+                {name} <span style={{ color: COLORS.textMuted, fontWeight: 400 }}>(graph)</span>
             </span>
             <svg
                 viewBox={`${bounds.x} ${bounds.y} ${bounds.w} ${bounds.h}`}
@@ -658,9 +561,10 @@ function GraphView2D({
                     width: "100%",
                     maxWidth: 420,
                     height: "auto",
-                    maxHeight: 300,
+                    maxHeight: 320,
                     marginTop: 6,
                     display: "block",
+                    overflow: "visible",
                 }}
             >
                 {/* Edges */}
@@ -674,12 +578,9 @@ function GraphView2D({
                             key={`${from}-${to}`}
                             d={getEdgePath(fromPos, toPos)}
                             fill="none"
-                            stroke={isTraversed ? "var(--blue-400)" : "rgba(255, 255, 255, 0.2)"}
-                            strokeWidth={isTraversed ? 3 : 1.5}
-                            opacity={isTraversed ? 1 : 0.6}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            style={{ transition: "stroke 0.3s ease, stroke-width 0.3s ease" }}
+                            stroke={isTraversed ? COLORS.changed : "#94a3b8"}
+                            strokeWidth={isTraversed ? 2.5 : 1.5}
+                            opacity={isTraversed ? 1 : 0.45}
                         />
                     );
                 })}
@@ -687,17 +588,17 @@ function GraphView2D({
                 {nodeIds.map(id => {
                     const pos = layout.get(id);
                     if (!pos) return null;
-                    let fill = "rgba(15, 23, 42, 0.8)"; // dark slate
-                    let stroke = "rgba(255, 255, 255, 0.2)";
-                    if (id === currentStr) { fill = "rgba(250, 204, 21, 0.2)"; stroke = "var(--hl-yellow)"; }
-                    else if (visitedSet.has(id)) { fill = "rgba(74, 222, 128, 0.2)"; stroke = "var(--hl-green)"; }
-                    else if (queueSet.has(id)) { fill = "rgba(59, 130, 246, 0.2)"; stroke = "var(--blue-500)"; }
+                    let fill = "#f8fafc";
+                    let stroke = "#cbd5e1";
+                    if (id === currentStr) { fill = "#ffedd5"; stroke = "#f97316"; }
+                    else if (visitedSet.has(id)) { fill = "#dcfce7"; stroke = "#22c55e"; }
+                    else if (queueSet.has(id)) { fill = "#dbeafe"; stroke = "#3b82f6"; }
                     return (
-                        <g key={id} style={{ transition: "all 0.3s ease" }}>
-                            <circle cx={pos.x} cy={pos.y} r={NODE_R} fill={fill} stroke={stroke} strokeWidth={2} style={{ backdropFilter: "blur(4px)" }} />
+                        <g key={id}>
+                            <circle cx={pos.x} cy={pos.y} r={NODE_R} fill={fill} stroke={stroke} strokeWidth={2} />
                             <text
                                 x={pos.x} y={pos.y} textAnchor="middle" dominantBaseline="central"
-                                fill={COLORS.text} fontSize={13} fontFamily="var(--font-sans), sans-serif" fontWeight={600}
+                                fill={COLORS.text} fontSize={12} fontFamily="monospace" fontWeight={600}
                             >
                                 {id}
                             </text>

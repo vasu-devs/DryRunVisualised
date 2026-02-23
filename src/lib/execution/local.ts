@@ -18,6 +18,7 @@ export const executeLocal = (code: string): Promise<ExecutionResult> => {
         const timeout = 15000; // 15 second timeout
 
         const pyCmd = process.platform === "win32" ? "python" : "python3";
+
         execFile(
             pyCmd,
             ["-c", code],

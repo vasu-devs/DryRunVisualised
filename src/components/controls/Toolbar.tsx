@@ -12,12 +12,12 @@ export function Toolbar({ onExecute, isExecuting }: ToolbarProps) {
     const { nextStep, prevStep, reset, trace } = useTraceStore();
 
     return (
-        <div className="flex items-center gap-4 p-3 bg-transparent border-b border-glass-border-light">
+        <div className="flex items-center gap-4 p-2 bg-transparent border-b border-cream-200">
             {/* Single Run & Visualize button — executes code and auto-starts animation */}
             <button
                 onClick={onExecute}
                 disabled={isExecuting}
-                className="flex items-center gap-2 px-4 py-2 glass-button bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 hover:text-blue-300 border-blue-500/30 disabled:opacity-50 font-semibold tracking-wide transition-all duration-300"
+                className="flex items-center gap-2 px-4 py-1.5 bg-cream-800 hover:bg-cream-900 disabled:bg-cream-300 text-cream-50 shadow-sm rounded-md text-sm font-medium transition-colors"
             >
                 {isExecuting ? (
                     <>
@@ -32,14 +32,14 @@ export function Toolbar({ onExecute, isExecuting }: ToolbarProps) {
                 )}
             </button>
 
-            <div className="h-6 w-px bg-glass-border-strong mx-2" />
+            <div className="h-6 w-[1px] bg-cream-300 mx-2" />
 
             {/* Step controls — manual stepping */}
-            <div className="flex items-center gap-2 bg-glass-100 p-1 rounded-lg border border-glass-border-light backdrop-blur-md">
+            <div className="flex items-center gap-1">
                 <button
                     onClick={prevStep}
                     disabled={trace.length === 0}
-                    className="p-1.5 rounded hover:bg-glass-200 text-slate-300 hover:text-white disabled:opacity-40 transition-colors"
+                    className="p-2 hover:bg-cream-200 text-cream-600 hover:text-cream-900 rounded-md transition-colors disabled:opacity-40"
                     title="Step Back"
                 >
                     <SkipBack size={18} />
@@ -48,7 +48,7 @@ export function Toolbar({ onExecute, isExecuting }: ToolbarProps) {
                 <button
                     onClick={nextStep}
                     disabled={trace.length === 0}
-                    className="p-1.5 rounded hover:bg-glass-200 text-slate-300 hover:text-white disabled:opacity-40 transition-colors"
+                    className="p-2 hover:bg-cream-200 text-cream-600 hover:text-cream-900 rounded-md transition-colors disabled:opacity-40"
                     title="Step Forward"
                 >
                     <SkipForward size={18} />
@@ -58,11 +58,11 @@ export function Toolbar({ onExecute, isExecuting }: ToolbarProps) {
             <button
                 onClick={reset}
                 disabled={trace.length === 0}
-                className="p-2 ml-auto rounded glass-button bg-glass-100 text-slate-400 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 disabled:opacity-40 transition-all"
+                className="p-2 hover:bg-cream-200 text-cream-600 hover:text-cream-900 rounded-md transition-colors ml-auto disabled:opacity-40"
                 title="Reset"
             >
-                <RotateCcw size={16} />
+                <RotateCcw size={18} />
             </button>
-        </div >
+        </div>
     );
 }

@@ -87,21 +87,21 @@ export function StepSlider() {
     if (trace.length === 0) return null;
 
     return (
-        <div className="px-6 py-4 bg-glass-100/30 border-t border-glass-border-light flex items-center gap-4 z-10 relative backdrop-blur-md rounded-b-xl">
+        <div className="px-4 py-2 bg-cream-100/50 matte-glass border-t border-cream-200 flex items-center gap-3 z-10 relative">
             {/* Play/Pause button — integrated into slider bar */}
             <button
                 onClick={togglePlay}
-                className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 ${isPlaying
-                    ? "bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]"
-                    : "glass-button bg-glass-200 text-slate-300 hover:text-white"
+                className={`p-1.5 rounded-md transition-colors shadow-sm ${isPlaying
+                    ? "bg-cream-300/50 text-cream-800 hover:bg-cream-300"
+                    : "bg-cream-800 text-cream-50 hover:bg-cream-900"
                     }`}
                 title={isPlaying ? "Pause" : "Play"}
             >
-                {isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
+                {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
             </button>
 
-            <span className="text-sm font-sans text-slate-400 whitespace-nowrap min-w-[80px] font-medium tracking-wide">
-                Step <span className="text-slate-200 font-bold">{currentStepIndex + 1}</span> / {trace.length}
+            <span className="text-xs font-mono text-cream-600 whitespace-nowrap min-w-[80px] font-medium">
+                Step {currentStepIndex + 1} / {trace.length}
             </span>
             <input
                 type="range"
@@ -109,17 +109,17 @@ export function StepSlider() {
                 max={trace.length - 1}
                 value={currentStepIndex}
                 onChange={(e) => setStep(parseInt(e.target.value))}
-                className="flex-1 h-1.5 bg-glass-200 rounded-full appearance-none cursor-pointer accent-blue-500 hover:accent-blue-400 transition-all"
+                className="w-full h-1.5 bg-cream-300 rounded-lg appearance-none cursor-pointer accent-cream-800"
             />
             {/* Speed selector */}
-            <div className="flex items-center gap-1 bg-glass-100 p-1 rounded-lg border border-glass-border-light">
+            <div className="flex items-center gap-1">
                 {SPEED_OPTIONS.map((opt) => (
                     <button
                         key={opt.value}
                         onClick={() => setPlaySpeed(opt.value)}
-                        className={`px-2 py-1 text-xs font-semibold font-sans rounded transition-colors ${playSpeed === opt.value
-                            ? "bg-blue-600/30 text-blue-300 font-bold"
-                            : "text-slate-400 hover:text-slate-200 hover:bg-glass-200"
+                        className={`px-1.5 py-0.5 text-[10px] font-mono rounded transition-colors ${playSpeed === opt.value
+                            ? "bg-cream-800 text-cream-50 shadow-sm"
+                            : "text-cream-500 hover:text-cream-800 hover:bg-cream-200"
                             }`}
                     >
                         {opt.label}

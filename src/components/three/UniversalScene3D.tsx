@@ -6,6 +6,7 @@ import { Text, RoundedBox, Line } from "@react-three/drei";
 import * as THREE from "three";
 import { TraceStep } from "@/lib/interpreter/schema";
 import { VizContext } from "@/lib/vizDetector";
+import { useGraphLayout } from "@/hooks/useGraphLayout";
 
 // ─── Configuration ───────────────────────────────────────────
 const BAR_SPACING = 1.4;
@@ -23,7 +24,7 @@ function DraggableGroup({
     initialPosition?: [number, number, number];
 }) {
     const groupRef = useRef<THREE.Group>(null);
-    const { camera } = useThree();
+    const { camera, gl } = useThree();
     const [offset, setOffset] = useState<[number, number, number]>([0, 0, 0]);
     const dragState = useRef<{
         active: boolean;
@@ -61,7 +62,7 @@ function DraggableGroup({
             startMouse: new THREE.Vector2(point.x, point.y),
             startOffset: [...offset],
         };
-        gl.domElement.style.cursor = "grabbing";
+        document.body.style.cursor = "grabbing";
         gl.domElement.setPointerCapture(ne.pointerId);
     }, [getWorldPoint, offset, gl]);
 
@@ -70,10 +71,11 @@ function DraggableGroup({
         if (!dragState.current.active) return;
         const ne = e.nativeEvent as PointerEvent;
         const point = getWorldPoint(ne.clientX, ne.clientY);
-        // dx and dy are unused, removed
+        const dx = point.x - dragState.current.startMouse.x;
+        const dy = point.y - dragState.current.startMouse.y;
         setOffset([
-            dragState.current.startOffset[0] + (point.x - dragState.current.startMouse.x),
-            dragState.current.startOffset[1] + (point.y - dragState.current.startMouse.y),
+            dragState.current.startOffset[0] + dx,
+            dragState.current.startOffset[1] + dy,
             dragState.current.startOffset[2],
         ]);
     }, [getWorldPoint]);
@@ -81,7 +83,7 @@ function DraggableGroup({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handlePointerUp = useCallback((e: any) => {
         dragState.current.active = false;
-        gl.domElement.style.cursor = "auto";
+        document.body.style.cursor = "auto";
         const ne = e.nativeEvent as PointerEvent;
         if (ne) gl.domElement.releasePointerCapture(ne.pointerId);
     }, [gl]);
@@ -107,10 +109,10 @@ function DraggableGroup({
             onPointerUp={handlePointerUp}
             onDoubleClick={handleDoubleClick}
             onPointerOver={() => {
-                if (!dragState.current.active) gl.domElement.style.cursor = "grab";
+                if (!dragState.current.active) document.body.style.cursor = "grab";
             }}
             onPointerOut={() => {
-                if (!dragState.current.active) gl.domElement.style.cursor = "auto";
+                if (!dragState.current.active) document.body.style.cursor = "auto";
             }}
         >
             {children}
@@ -215,7 +217,7 @@ function Bar3D({
     const targetEmissive = useMemo(() => {
         if (isChanged) return new THREE.Color("#16a34a");
         if (isPointed) return new THREE.Color("#d97706");
-        return new THREE.Color("#1e40af");
+        return new THREE.Color("#ffffff");
     }, [isChanged, isPointed]);
 
     useFrame((_, delta) => {
@@ -260,21 +262,23 @@ function Bar3D({
                 <meshStandardMaterial
                     ref={matRef}
                     color={color}
-                    emissive="#1e40af"
-                    emissiveIntensity={0.3}
+                    emissive="#ffffff"
+                    emissiveIntensity={0.6}
                     roughness={0.2}
-                    metalness={0.8}
+                    metalness={0.1}
+                    transparent
+                    opacity={0.9}
                 />
             </RoundedBox>
             {/* Value on top */}
             <Text
                 position={[0, barHeight + 0.35, 0]}
                 fontSize={0.3}
-                color="white"
+                color="#302a1e"
                 anchorX="center"
                 anchorY="middle"
                 outlineWidth={0.015}
-                outlineColor="#020617"
+                outlineColor="#fcfbf9"
             >
                 {displayText}
             </Text>
@@ -282,7 +286,7 @@ function Bar3D({
             <Text
                 position={[0, -0.25, 0]}
                 fontSize={0.18}
-                color="#64748b"
+                color="#a8967f"
                 anchorX="center"
                 anchorY="top"
             >
@@ -345,7 +349,7 @@ function Pointer3D({
                 anchorX="center"
                 anchorY="top"
                 outlineWidth={0.01}
-                outlineColor="#020617"
+                outlineColor="#fcfbf9"
             >
                 {label}
             </Text>
@@ -372,21 +376,23 @@ function ScalarBadge3D({
         <group position={[xPos, yPos, 0]}>
             <RoundedBox args={[text.length * 0.2 + 0.4, 0.45, 0.15]} radius={0.06} smoothness={3}>
                 <meshStandardMaterial
-                    color={isChanged ? "#052e16" : "#1e293b"}
-                    emissive={isChanged ? "#22c55e" : "#334155"}
-                    emissiveIntensity={isChanged ? 0.6 : 0.15}
-                    roughness={0.4}
-                    metalness={0.5}
+                    color={isChanged ? "#dcfce7" : "#ffffff"}
+                    emissive={isChanged ? "#22c55e" : "#f5f2eb"}
+                    emissiveIntensity={isChanged ? 0.6 : 0.5}
+                    roughness={0.2}
+                    metalness={0.1}
+                    transparent
+                    opacity={0.9}
                 />
             </RoundedBox>
             <Text
                 position={[0, 0, 0.09]}
                 fontSize={0.2}
-                color={isChanged ? "#4ade80" : "#e2e8f0"}
+                color={isChanged ? "#15803d" : "#302a1e"}
                 anchorX="center"
                 anchorY="middle"
                 outlineWidth={0.008}
-                outlineColor="#020617"
+                outlineColor="#fcfbf9"
             >
                 {text}
             </Text>
@@ -422,9 +428,9 @@ function GridTile3D({
         if (isChanged) return new THREE.Color("#22c55e");
         if (isPointed) return new THREE.Color("#f59e0b");
         const numVal = typeof value === "number" ? value : 0;
-        if (numVal === 0) return new THREE.Color("#1e293b");
-        if (numVal === 1 || value === true) return new THREE.Color("#3b82f6");
-        return new THREE.Color("#6366f1");
+        if (numVal === 0) return new THREE.Color("#ffffff");
+        if (numVal === 1 || value === true) return new THREE.Color("#dbeafe");
+        return new THREE.Color("#e0e7ff");
     }, [isChanged, isPointed, value]);
 
     useFrame((_, delta) => {
@@ -436,7 +442,7 @@ function GridTile3D({
                 matRef.current.emissiveIntensity = Math.sin(elapsedRef.current * 4) * 0.2 + 0.5;
             } else {
                 matRef.current.emissiveIntensity = THREE.MathUtils.lerp(
-                    matRef.current.emissiveIntensity, 0.2, speed
+                    matRef.current.emissiveIntensity, 0.5, speed
                 );
             }
         }
@@ -450,27 +456,28 @@ function GridTile3D({
             <RoundedBox args={[GRID_TILE, tileHeight, GRID_TILE]} radius={0.04} smoothness={3}>
                 <meshStandardMaterial
                     ref={matRef}
-                    color="#1e293b"
-                    emissive="#334155"
-                    emissiveIntensity={0.2}
-                    roughness={0.3}
-                    metalness={0.7}
+                    color="#ffffff"
+                    emissive="#f5f2eb"
+                    emissiveIntensity={0.5}
+                    roughness={0.2}
+                    metalness={0.1}
+                    transparent
+                    opacity={0.9}
                 />
             </RoundedBox>
             <Text
                 position={[0, tileHeight / 2 + 0.12, 0]}
                 rotation={[-Math.PI / 4, 0, 0]}
                 fontSize={0.22}
-                color="white"
+                color="#302a1e"
                 anchorX="center"
                 anchorY="middle"
-                font="var(--font-sans)"
-                outlineWidth={0.005}
-                outlineColor="#020617"
+                outlineWidth={0.008}
+                outlineColor="#fcfbf9"
             >
                 {displayText}
             </Text>
-        </group >
+        </group>
     );
 }
 
@@ -493,13 +500,12 @@ function DictView3D({
             {/* Dict name label */}
             <Text
                 position={[0, 0.8, 0]}
-                fontSize={0.26}
+                fontSize={0.28}
                 color="#38bdf8"
                 anchorX="center"
                 anchorY="middle"
-                font="var(--font-sans)"
-                outlineWidth={0.005}
-                outlineColor="#020617"
+                outlineWidth={0.01}
+                outlineColor="#fcfbf9"
             >
                 {name}
             </Text>
@@ -518,21 +524,22 @@ function DictView3D({
                             smoothness={3}
                         >
                             <meshStandardMaterial
-                                color="#1e293b"
-                                emissive="#334155"
-                                emissiveIntensity={0.15}
-                                roughness={0.4}
-                                metalness={0.5}
+                                color="#ffffff"
+                                emissive="#f5f2eb"
+                                emissiveIntensity={0.5}
+                                roughness={0.2}
+                                metalness={0.1}
+                                transparent
+                                opacity={0.9}
                             />
                         </RoundedBox>
                         <Text
                             position={[0, 0, 0.32]}
-                            fontSize={0.15}
-                            color="#e2e8f0"
+                            fontSize={0.16}
+                            color="#302a1e"
                             anchorX="center"
                             anchorY="middle"
                             maxWidth={1.3}
-                            font="var(--font-sans)"
                         >
                             {text}
                         </Text>
@@ -578,14 +585,13 @@ function Stack3D({
             {/* Label */}
             <Text
                 position={[0, (n + 1) * (CELL_H + GAP) + 0.6, 0]}
-                fontSize={0.3}
+                fontSize={0.34}
                 color="#2dd4bf"
                 anchorX="center"
                 anchorY="middle"
-                outlineWidth={0.01}
-                outlineColor="#020617"
-                fontWeight="600"
-                font="var(--font-sans)"
+                outlineWidth={0.018}
+                outlineColor="#fcfbf9"
+                fontWeight="bold"
             >
                 {name} (stack) [{n}]
             </Text>
@@ -653,11 +659,11 @@ function Stack3D({
                         <Text
                             position={[0, CELL_H / 2, BAR_DEPTH / 2 + 0.02]}
                             fontSize={0.24}
-                            color="white"
+                            color="#302a1e"
                             anchorX="center"
                             anchorY="middle"
                             outlineWidth={0.01}
-                            outlineColor="#020617"
+                            outlineColor="#fcfbf9"
                         >
                             {displayText}
                         </Text>
@@ -665,7 +671,7 @@ function Stack3D({
                         <Text
                             position={[-CELL_W / 2 - 0.25, CELL_H / 2, 0]}
                             fontSize={0.14}
-                            color="#64748b"
+                            color="#a8967f"
                             anchorX="right"
                             anchorY="middle"
                         >
@@ -717,14 +723,13 @@ function Queue3D({
             {/* Label */}
             <Text
                 position={[0, CELL_H + 1.2, 0]}
-                fontSize={0.3}
+                fontSize={0.34}
                 color="#fb923c"
                 anchorX="center"
                 anchorY="middle"
-                outlineWidth={0.01}
-                outlineColor="#020617"
-                fontWeight="600"
-                font="var(--font-sans)"
+                outlineWidth={0.018}
+                outlineColor="#fcfbf9"
+                fontWeight="bold"
             >
                 {name} (queue) [{n}]
             </Text>
@@ -736,7 +741,6 @@ function Queue3D({
                 color="#fdba74"
                 anchorX="center"
                 anchorY="middle"
-                font="var(--font-sans)"
             >
                 dequeue ← · → enqueue
             </Text>
@@ -833,12 +837,11 @@ function Queue3D({
                         <Text
                             position={[0, CELL_H / 2, BAR_DEPTH / 2 + 0.02]}
                             fontSize={0.22}
-                            color="white"
+                            color="#302a1e"
                             anchorX="center"
                             anchorY="middle"
-                            font="var(--font-sans)"
-                            outlineWidth={0.005}
-                            outlineColor="#020617"
+                            outlineWidth={0.01}
+                            outlineColor="#fcfbf9"
                         >
                             {displayText}
                         </Text>
@@ -846,7 +849,7 @@ function Queue3D({
                         <Text
                             position={[0, -0.2, 0]}
                             fontSize={0.14}
-                            color="#64748b"
+                            color="#a8967f"
                             anchorX="center"
                             anchorY="top"
                         >
@@ -874,14 +877,10 @@ function LinkedListView3D({
     name,
     values,
     yPos,
-    currentVar,
-    prevVar,
 }: {
     name: string;
     values: unknown[];
     yPos: number;
-    currentVar?: string | null;
-    prevVar?: string | null;
 }) {
     const NODE_W = 1.1;
     const NODE_H = 0.65;
@@ -896,14 +895,13 @@ function LinkedListView3D({
             {/* Label */}
             <Text
                 position={[0, NODE_H + 1.4, 0]}
-                fontSize={0.3}
+                fontSize={0.34}
                 color="#86efac"
                 anchorX="center"
                 anchorY="middle"
-                font="var(--font-sans)"
-                fontWeight="600"
-                outlineWidth={0.01}
-                outlineColor="#020617"
+                outlineWidth={0.018}
+                outlineColor="#fcfbf9"
+                fontWeight="bold"
             >
                 {name} (linked list) [{n}]
             </Text>
@@ -923,12 +921,11 @@ function LinkedListView3D({
             {n > 0 && (
                 <Text
                     position={[-xCenter - 0.0, NODE_H + 0.55, 0]}
-                    fontSize={0.16}
+                    fontSize={0.18}
                     color="#22c55e"
                     anchorX="center"
                     anchorY="middle"
-                    fontWeight="600"
-                    font="var(--font-sans)"
+                    fontWeight="bold"
                 >
                     HEAD
                 </Text>
@@ -970,13 +967,12 @@ function LinkedListView3D({
                         <Text
                             position={[-NODE_W / 8, NODE_H / 2, BAR_D / 2 + 0.02]}
                             fontSize={0.24}
-                            color="white"
+                            color="#302a1e"
                             anchorX="center"
                             anchorY="middle"
-                            font="var(--font-sans)"
-                            outlineWidth={0.005}
-                            outlineColor="#020617"
-                            fontWeight="600"
+                            outlineWidth={0.01}
+                            outlineColor="#fcfbf9"
+                            fontWeight="bold"
                         >
                             {displayText}
                         </Text>
@@ -996,7 +992,7 @@ function LinkedListView3D({
                         <Text
                             position={[0, -0.2, 0]}
                             fontSize={0.14}
-                            color="#64748b"
+                            color="#a8967f"
                             anchorX="center"
                             anchorY="top"
                         >
@@ -1037,14 +1033,13 @@ function LinkedListView3D({
             {n > 0 && (
                 <group position={[(n - 1) * (NODE_W + GAP) - xCenter + NODE_W / 2 + GAP / 2 + 0.4, NODE_H / 2, 0]}>
                     <Text
-                        fontSize={0.2}
+                        fontSize={0.22}
                         color="#ef4444"
                         anchorX="center"
                         anchorY="middle"
-                        fontWeight="600"
-                        font="var(--font-sans)"
-                        outlineWidth={0.005}
-                        outlineColor="#020617"
+                        fontWeight="bold"
+                        outlineWidth={0.015}
+                        outlineColor="#fcfbf9"
                     >
                         NULL
                     </Text>
@@ -1070,104 +1065,6 @@ function GraphView3D({
     xOffset: number;
     zOffset: number;
 }) {
-    const nodeIds = Object.keys(adj);
-
-    // ── Force-directed layout ──
-    // Runs a spring simulation to naturally separate nodes and minimize edge crossings
-    const layout = useMemo(() => {
-        const n = nodeIds.length;
-        if (n === 0) return new Map<string, { x: number; y: number }>();
-
-        // Start from a wider circular arrangement as seed
-        const positions: Record<string, { x: number; y: number }> = {};
-        nodeIds.forEach((id, i) => {
-            const angle = (2 * Math.PI * i) / n - Math.PI / 2;
-            positions[id] = {
-                x: Math.cos(angle) * GRAPH_SCALE * 1.2,
-                y: Math.sin(angle) * GRAPH_SCALE * 1.2,
-            };
-        });
-
-        // Build undirected edge set
-        const edgeSet = new Set<string>();
-        const edgeList: [string, string][] = [];
-        for (const [node, neighbors] of Object.entries(adj)) {
-            for (const neighbor of neighbors) {
-                const key = [node, String(neighbor)].sort().join("-");
-                if (!edgeSet.has(key)) {
-                    edgeSet.add(key);
-                    edgeList.push([node, String(neighbor)]);
-                }
-            }
-        }
-
-        // Force simulation parameters
-        const REPULSION = 8.0;
-        const SPRING_K = 0.15;
-        const IDEAL_LENGTH = GRAPH_SCALE * 0.9;
-        const DAMPING = 0.85;
-        const ITERATIONS = 200;
-
-        for (let iter = 0; iter < ITERATIONS; iter++) {
-            const forces: Record<string, { fx: number; fy: number }> = {};
-            for (const id of nodeIds) {
-                forces[id] = { fx: 0, fy: 0 };
-            }
-
-            // Repulsion between all node pairs (Coulomb's law)
-            for (let i = 0; i < n; i++) {
-                for (let j = i + 1; j < n; j++) {
-                    const a = nodeIds[i];
-                    const b = nodeIds[j];
-                    const dx = positions[b].x - positions[a].x;
-                    const dy = positions[b].y - positions[a].y;
-                    const dist = Math.sqrt(dx * dx + dy * dy) + 0.01;
-                    const force = REPULSION / (dist * dist);
-                    const fx = (dx / dist) * force;
-                    const fy = (dy / dist) * force;
-                    forces[a].fx -= fx;
-                    forces[a].fy -= fy;
-                    forces[b].fx += fx;
-                    forces[b].fy += fy;
-                }
-            }
-
-            // Spring attraction along edges (Hooke's law)
-            for (const [a, b] of edgeList) {
-                const dx = positions[b].x - positions[a].x;
-                const dy = positions[b].y - positions[a].y;
-                const dist = Math.sqrt(dx * dx + dy * dy) + 0.01;
-                const displacement = dist - IDEAL_LENGTH;
-                const force = SPRING_K * displacement;
-                const fx = (dx / dist) * force;
-                const fy = (dy / dist) * force;
-                forces[a].fx += fx;
-                forces[a].fy += fy;
-                forces[b].fx -= fx;
-                forces[b].fy -= fy;
-            }
-
-            // Center gravity — gently pull toward origin
-            for (const id of nodeIds) {
-                forces[id].fx -= positions[id].x * 0.01;
-                forces[id].fy -= positions[id].y * 0.01;
-            }
-
-            // Apply forces with damping
-            const cooling = 1 - iter / ITERATIONS;
-            for (const id of nodeIds) {
-                positions[id].x += forces[id].fx * DAMPING * cooling;
-                positions[id].y += forces[id].fy * DAMPING * cooling;
-            }
-        }
-
-        const result = new Map<string, { x: number; y: number }>();
-        for (const id of nodeIds) {
-            result.set(id, positions[id]);
-        }
-        return result;
-    }, [nodeIds, adj]);
-
     const visitedSet = useMemo(() => {
         if (Array.isArray(visited)) return new Set(visited.map(String));
         if (visited && typeof visited === 'object') return new Set(Object.keys(visited).map(String));
@@ -1180,21 +1077,8 @@ function GraphView3D({
     }, [queue]);
     const currentStr = current !== undefined ? String(current) : null;
 
-    // Deduplicated edges
-    const edges = useMemo(() => {
-        const e: { from: string; to: string }[] = [];
-        const seen = new Set<string>();
-        for (const [node, neighbors] of Object.entries(adj)) {
-            for (const neighbor of neighbors) {
-                const key = [node, String(neighbor)].sort().join("-");
-                if (!seen.has(key)) {
-                    seen.add(key);
-                    e.push({ from: node, to: String(neighbor) });
-                }
-            }
-        }
-        return e;
-    }, [adj]);
+    // Use shared layout engine
+    const { layout, edges, nodes: nodeIds } = useGraphLayout(adj, GRAPH_SCALE, 200);
 
     // Compute center of graph for edge curving direction
     const graphCenter = useMemo(() => {
@@ -1281,41 +1165,43 @@ function GraphView3D({
                 const pos = layout.get(id);
                 if (!pos) return null;
 
-                let nodeColor = "#475569";
-                let emissive = "#1e293b";
+                let nodeColor = "#f8fafc";
+                let emissive = "#cbd5e1";
                 if (id === currentStr) {
-                    nodeColor = "#f59e0b";
-                    emissive = "#d97706";
+                    nodeColor = "#ffedd5";
+                    emissive = "#f97316";
                 } else if (visitedSet.has(id)) {
-                    nodeColor = "#22c55e";
-                    emissive = "#16a34a";
+                    nodeColor = "#dcfce7";
+                    emissive = "#22c55e";
                 } else if (queueSet.has(id)) {
-                    nodeColor = "#3b82f6";
-                    emissive = "#2563eb";
+                    nodeColor = "#dbeafe";
+                    emissive = "#3b82f6";
                 }
 
                 return (
                     <group key={id} position={[pos.x, pos.y, 0]}>
                         <mesh castShadow>
                             <sphereGeometry args={[0.4, 24, 24]} />
-                            <meshStandardMaterial
+                            <meshPhysicalMaterial
                                 color={nodeColor}
                                 emissive={emissive}
-                                emissiveIntensity={0.5}
+                                emissiveIntensity={0.6}
                                 roughness={0.15}
-                                metalness={0.85}
+                                transmission={0.8}
+                                thickness={0.5}
+                                ior={1.4}
+                                clearcoat={0.8}
+                                clearcoatRoughness={0.1}
                             />
                         </mesh>
                         <Text
                             position={[0, 0, 0.45]}
                             fontSize={0.32}
-                            color="white"
+                            color="#302a1e"
                             anchorX="center"
                             anchorY="middle"
-                            font="var(--font-sans)"
-                            outlineWidth={0.005}
-                            outlineColor="#020617"
-                            fontWeight="600"
+                            outlineWidth={0.015}
+                            outlineColor="#fcfbf9"
                         >
                             {id}
                         </Text>
@@ -1460,7 +1346,7 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
                             anchorX="center"
                             anchorY="middle"
                             outlineWidth={0.02}
-                            outlineColor="#020617"
+                            outlineColor="#fcfbf9"
                             fontWeight="bold"
                         >
                             {arr.name} [{n}]
@@ -1567,7 +1453,7 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
                             anchorX="center"
                             anchorY="middle"
                             outlineWidth={0.015}
-                            outlineColor="#020617"
+                            outlineColor="#fcfbf9"
                         >
                             {grid.name} [{totalRows}×{totalCols}]
                         </Text>
