@@ -652,6 +652,7 @@ export function Visualization2D({ step, prevStep, vizCtx }: Visualization2DProps
     const arrays: Array<{ name: string; value: unknown[] }> = [];
     const linkedLists: Array<{ name: string; values: unknown[] }> = [];
     const dicts: Array<{ name: string; value: Record<string, unknown> }> = [];
+    const adjLists: Array<{ name: string; value: Record<string, unknown[]> }> = [];
     const scalars: Array<{ name: string; value: unknown }> = [];
 
     for (const v of sortedVars) {
@@ -661,6 +662,8 @@ export function Visualization2D({ step, prevStep, vizCtx }: Visualization2DProps
             // Check for serialized linked list first
             if (isLinkedListValue2D(v.value)) {
                 linkedLists.push({ name: v.name, values: (v.value as { __type__: string; values: unknown[] }).values });
+            } else if (isAdjList(v.value)) {
+                adjLists.push({ name: v.name, value: v.value as Record<string, unknown[]> });
             } else {
                 dicts.push({ name: v.name, value: v.value as Record<string, unknown> });
             }
@@ -804,6 +807,37 @@ export function Visualization2D({ step, prevStep, vizCtx }: Visualization2DProps
                                 key={d.name}
                                 name={d.name}
                                 data={d.value}
+                                visited={graphVisited}
+                                queue={graphQueue}
+                                current={graphCurrent}
+                            />
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* Graph Visualizations (adjacency lists from trees/graphs) */}
+            {adjLists.length > 0 && (
+                <div>
+                    <div style={{
+                        fontSize: 10,
+                        color: COLORS.textMuted,
+                        textTransform: "uppercase",
+                        letterSpacing: "1px",
+                        marginBottom: 6,
+                        fontWeight: 600,
+                    }}>
+                        Graphs
+                    </div>
+                    {adjLists.map(g => {
+                        const graphVisited = step.stack["visited"] as unknown[] | undefined;
+                        const graphQueue = step.stack["queue"] as unknown[] | undefined;
+                        const graphCurrent = step.stack["current"] ?? step.stack["node"] ?? step.stack["curr"];
+                        return (
+                            <GraphView2D
+                                key={g.name}
+                                name={g.name}
+                                adj={g.value as Record<string, number[]>}
                                 visited={graphVisited}
                                 queue={graphQueue}
                                 current={graphCurrent}

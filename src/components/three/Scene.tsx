@@ -75,13 +75,13 @@ function CameraRig({
             mouseButtons={mouseButtons}
             touches={touches}
             enableDamping
-            dampingFactor={0.08}
-            rotateSpeed={0.5}
-            panSpeed={0.8}
-            zoomSpeed={1.2}
+            dampingFactor={0.06} // Smoother, heavier feel
+            rotateSpeed={0.6}
+            panSpeed={0.7}
+            zoomSpeed={1.0}
             minDistance={3}
-            maxDistance={200}
-            maxPolarAngle={Math.PI * 0.85}
+            maxDistance={150}
+            maxPolarAngle={Math.PI / 2 - 0.05} // Prevent going strictly under the floor
             minPolarAngle={0.1}
             autoRotate={false}
         />
@@ -280,12 +280,13 @@ export function Scene() {
                     {/* Grid floor */}
                     <Grid
                         infiniteGrid
-                        fadeDistance={80}
-                        fadeStrength={4}
-                        cellSize={1}
-                        sectionSize={5}
-                        sectionColor="#d6ccb5"
-                        cellColor="#e8e2d4"
+                        fadeDistance={60}
+                        fadeStrength={1.5}
+                        cellSize={0.6}
+                        sectionSize={3}
+                        sectionColor="#cbd5e1"
+                        cellColor="#e2e8f0"
+                        position={[0, -0.01, 0]}
                     />
 
                     {/* Universal Visualization */}

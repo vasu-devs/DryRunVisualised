@@ -302,6 +302,8 @@ export default function Home() {
   const [language] = useState("python");
   const [isExecuting, setIsExecuting] = useState(false);
   const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [bottomPanelCollapsed, setBottomPanelCollapsed] = useState(false);
   const setTrace = useTraceStore((state) => state.setTrace);
   const trace = useTraceStore((s) => s.trace);
   const currentStep = useTraceStore((s) => {
@@ -397,12 +399,14 @@ export default function Home() {
       {/* Main Content */}
       <div className="flex-1 flex min-h-0">
         {/* Left Side: Editor + Controls */}
-        <div className="w-[450px] flex flex-col border-r border-cream-200 bg-cream-50/50 z-10 relative shadow-[4px_0_24px_rgba(0,0,0,0.02)] matte-glass-darker">
-          <Toolbar onExecute={handleExecute} isExecuting={isExecuting} />
-          <div className="flex-1 min-h-0">
-            <CodeEditor code={code} language={language} onChange={(val) => setCode(val || "")} />
+        {!isFullscreen && (
+          <div className="w-[450px] flex flex-col border-r border-cream-200 bg-cream-50/50 z-10 relative shadow-[4px_0_24px_rgba(0,0,0,0.02)] matte-glass-darker">
+            <Toolbar onExecute={handleExecute} isExecuting={isExecuting} />
+            <div className="flex-1 min-h-0">
+              <CodeEditor code={code} language={language} onChange={(val) => setCode(val || "")} />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Right Side: Visualization */}
         <div className="flex-1 relative flex flex-col bg-cream-100/30">
@@ -431,6 +435,15 @@ export default function Home() {
               {vizCtx.type !== "none" ? `Detected: ${vizCtx.type}` : "Waiting for code..."}
               {vizCtx.primaryVar ? ` • primary: ${vizCtx.primaryVar}` : ""}
             </span>
+            <div className="flex-1" />
+            {/* Fullscreen toggle */}
+            <button
+              onClick={() => setIsFullscreen(f => !f)}
+              className="px-2 py-1 text-xs font-medium rounded-md transition-all shadow-sm bg-cream-100 text-cream-600 hover:bg-cream-200"
+              title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+            >
+              {isFullscreen ? "⊟ Exit" : "⊞ Fullscreen"}
+            </button>
           </div>
 
           {/* Visualization Area */}
@@ -452,11 +465,24 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Bottom Panel */}
-      <div className="h-48 border-t border-cream-200 flex overflow-hidden matte-glass z-20 relative">
-        <VariablePanel />
-        <StdoutPanel />
-      </div>
+      {/* Bottom Panel — Collapsible */}
+      {!isFullscreen && (
+        <div className={`border-t border-cream-200 flex overflow-hidden matte-glass z-20 relative transition-all duration-300 ${bottomPanelCollapsed ? 'h-8' : 'h-48'}`}>
+          {/* Collapse toggle */}
+          <button
+            onClick={() => setBottomPanelCollapsed(c => !c)}
+            className="absolute top-0 left-1/2 -translate-x-1/2 z-30 px-3 py-0.5 text-[10px] font-medium rounded-b-md bg-cream-200/80 text-cream-600 hover:bg-cream-300 transition-all backdrop-blur-sm"
+          >
+            {bottomPanelCollapsed ? '▼ Show Panels' : '▲ Hide Panels'}
+          </button>
+          {!bottomPanelCollapsed && (
+            <>
+              <VariablePanel />
+              <StdoutPanel />
+            </>
+          )}
+        </div>
+      )}
     </main>
   );
 }

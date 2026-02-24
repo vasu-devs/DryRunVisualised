@@ -2,7 +2,7 @@
 
 import { useRef, useMemo, useState, useCallback } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Text, RoundedBox, Line } from "@react-three/drei";
+import { Text, RoundedBox, Line, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { TraceStep } from "@/lib/interpreter/schema";
 import { VizContext } from "@/lib/vizDetector";
@@ -19,18 +19,21 @@ const GRAPH_SCALE = 2.2;
 function DraggableGroup({
     children,
     initialPosition = [0, 0, 0],
+    onDrag,
 }: {
     children: React.ReactNode;
     initialPosition?: [number, number, number];
+    onDrag?: (dx: number, dy: number, dz: number) => void;
 }) {
     const groupRef = useRef<THREE.Group>(null);
-    const { camera, gl } = useThree();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { camera, gl, controls } = useThree() as any;
     const [offset, setOffset] = useState<[number, number, number]>([0, 0, 0]);
     const dragState = useRef<{
         active: boolean;
-        startMouse: THREE.Vector2;
+        startWorld: THREE.Vector3;
         startOffset: [number, number, number];
-    }>({ active: false, startMouse: new THREE.Vector2(), startOffset: [0, 0, 0] });
+    }>({ active: false, startWorld: new THREE.Vector3(), startOffset: [0, 0, 0] });
 
     const dragPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), []);
     const raycaster = useMemo(() => new THREE.Raycaster(), []);
@@ -50,49 +53,59 @@ function DraggableGroup({
         [camera, gl, raycaster, dragPlane, intersection]
     );
 
+    // --- Global pointer handlers (registered on window to handle dragging beyond element bounds) ---
+    const onWindowPointerMove = useCallback((e: PointerEvent) => {
+        if (!dragState.current.active) return;
+        const point = getWorldPoint(e.clientX, e.clientY);
+        const dx = point.x - dragState.current.startWorld.x;
+        const dy = point.y - dragState.current.startWorld.y;
+        const newOffset: [number, number, number] = [
+            dragState.current.startOffset[0] + dx,
+            dragState.current.startOffset[1] + dy,
+            dragState.current.startOffset[2],
+        ];
+        setOffset(newOffset);
+        if (onDrag) onDrag(newOffset[0], newOffset[1], newOffset[2]);
+    }, [getWorldPoint, onDrag]);
+
+    const onWindowPointerUp = useCallback(() => {
+        if (!dragState.current.active) return;
+        dragState.current.active = false;
+        document.body.style.cursor = "auto";
+        // Re-enable OrbitControls
+        if (controls) controls.enabled = true;
+        window.removeEventListener("pointermove", onWindowPointerMove);
+        window.removeEventListener("pointerup", onWindowPointerUp);
+    }, [controls, onWindowPointerMove]);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handlePointerDown = useCallback((e: any) => {
         const ne = e.nativeEvent as PointerEvent;
-        if (ne && ne.button !== 0) return;
+        if (ne && ne.button !== 0) return; // Only left click
         e.stopPropagation();
+
+        // Disable OrbitControls immediately so it doesn't steal the event
+        if (controls) controls.enabled = false;
 
         const point = getWorldPoint(ne.clientX, ne.clientY);
         dragState.current = {
             active: true,
-            startMouse: new THREE.Vector2(point.x, point.y),
+            startWorld: point,
             startOffset: [...offset],
         };
         document.body.style.cursor = "grabbing";
-        gl.domElement.setPointerCapture(ne.pointerId);
-    }, [getWorldPoint, offset, gl]);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handlePointerMove = useCallback((e: any) => {
-        if (!dragState.current.active) return;
-        const ne = e.nativeEvent as PointerEvent;
-        const point = getWorldPoint(ne.clientX, ne.clientY);
-        const dx = point.x - dragState.current.startMouse.x;
-        const dy = point.y - dragState.current.startMouse.y;
-        setOffset([
-            dragState.current.startOffset[0] + dx,
-            dragState.current.startOffset[1] + dy,
-            dragState.current.startOffset[2],
-        ]);
-    }, [getWorldPoint]);
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handlePointerUp = useCallback((e: any) => {
-        dragState.current.active = false;
-        document.body.style.cursor = "auto";
-        const ne = e.nativeEvent as PointerEvent;
-        if (ne) gl.domElement.releasePointerCapture(ne.pointerId);
-    }, [gl]);
+        // Register global handlers for smooth dragging
+        window.addEventListener("pointermove", onWindowPointerMove);
+        window.addEventListener("pointerup", onWindowPointerUp);
+    }, [getWorldPoint, offset, controls, onWindowPointerMove, onWindowPointerUp]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleDoubleClick = useCallback((e: any) => {
         e.stopPropagation();
         setOffset([0, 0, 0]); // Reset to original position
-    }, []);
+        if (onDrag) onDrag(0, 0, 0);
+    }, [onDrag]);
 
     const pos: [number, number, number] = [
         initialPosition[0] + offset[0],
@@ -105,8 +118,6 @@ function DraggableGroup({
             ref={groupRef}
             position={pos}
             onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
             onDoubleClick={handleDoubleClick}
             onPointerOver={() => {
                 if (!dragState.current.active) document.body.style.cursor = "grab";
@@ -119,7 +130,8 @@ function DraggableGroup({
         </group>
     );
 }
-const LERP_SPEED = 5.0;
+const LERP_SPEED = 5.0; // Fallback
+const DAMP_FACTOR = 0.25; // Smoother physical spring effect
 
 const POINTER_COLORS = [
     "#f59e0b", "#ef4444", "#22c55e", "#a855f7",
@@ -208,40 +220,54 @@ function Bar3D({
     const numericVal = typeof value === "number" ? value : 1;
     const barHeight = Math.max(0.5, Math.abs(numericVal) * 0.3 + 0.5);
 
+    const [hovered, setHovered] = useState(false);
+
     const targetColor = useMemo(() => {
         if (isChanged) return new THREE.Color("#22c55e");
         if (isPointed) return new THREE.Color("#f59e0b");
+        if (hovered) return new THREE.Color("#e2e8f0"); // Highlight on hover
         return new THREE.Color(color);
-    }, [isChanged, isPointed, color]);
+    }, [isChanged, isPointed, hovered, color]);
 
     const targetEmissive = useMemo(() => {
         if (isChanged) return new THREE.Color("#16a34a");
         if (isPointed) return new THREE.Color("#d97706");
+        if (hovered) return new THREE.Color("#cbd5e1");
         return new THREE.Color("#ffffff");
-    }, [isChanged, isPointed]);
+    }, [isChanged, isPointed, hovered]);
 
     useFrame((_, delta) => {
         elapsedRef.current += delta;
-        const speed = LERP_SPEED * delta;
-        currentX.current = THREE.MathUtils.lerp(currentX.current, xPos, speed);
+        // Use smooth spring damping for movement
+        currentX.current = THREE.MathUtils.damp(currentX.current, xPos, 8, delta);
 
         if (groupRef.current) {
             groupRef.current.position.x = currentX.current;
+
+            // Add slight bobbing and elevation on interact
+            let targetY = 0;
             if (isPointed) {
-                groupRef.current.position.y = Math.sin(elapsedRef.current * 3) * 0.05;
-            } else {
-                groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, 0, speed);
+                targetY = Math.sin(elapsedRef.current * 3) * 0.05 + 0.1;
+            } else if (isChanged) {
+                targetY = 0.2; // Bounce up when changed
+            } else if (hovered) {
+                targetY = 0.1;
             }
+
+            groupRef.current.position.y = THREE.MathUtils.damp(
+                groupRef.current.position.y, targetY, 12, delta
+            );
         }
 
         if (matRef.current) {
-            matRef.current.color.lerp(targetColor, speed);
-            matRef.current.emissive.lerp(targetEmissive, speed);
+            matRef.current.color.lerp(targetColor, delta * 10);
+            matRef.current.emissive.lerp(targetEmissive, delta * 10);
+
             if (isChanged) {
                 matRef.current.emissiveIntensity = Math.sin(elapsedRef.current * 4) * 0.3 + 0.7;
             } else {
-                matRef.current.emissiveIntensity = THREE.MathUtils.lerp(
-                    matRef.current.emissiveIntensity, 0.3, speed
+                matRef.current.emissiveIntensity = THREE.MathUtils.damp(
+                    matRef.current.emissiveIntensity, hovered ? 0.6 : 0.3, 10, delta
                 );
             }
         }
@@ -250,7 +276,12 @@ function Bar3D({
     const displayText = formatCellValue(value);
 
     return (
-        <group ref={groupRef} position={[xPos, 0, zPos]}>
+        <group
+            ref={groupRef}
+            position={[xPos, 0, zPos]}
+            onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
+            onPointerOut={(e) => { e.stopPropagation(); setHovered(false); document.body.style.cursor = 'auto'; }}
+        >
             <RoundedBox
                 ref={meshRef}
                 args={[1.0, barHeight, BAR_DEPTH]}
@@ -270,6 +301,17 @@ function Bar3D({
                     opacity={0.9}
                 />
             </RoundedBox>
+
+            {/* Glassmorphic Tooltip on Hover */}
+            {hovered && (
+                <Html position={[0, barHeight + 0.8, 0]} center zIndexRange={[100, 0]}>
+                    <div className="bg-cream-100/80 backdrop-blur-md border border-cream-200/50 shadow-lg px-3 py-2 rounded-xl text-xs font-mono text-cream-900 pointer-events-none whitespace-nowrap flex flex-col items-center animate-fade-in-up">
+                        <span className="text-[10px] text-cream-500 font-sans uppercase tracking-wider mb-0.5">Index {index}</span>
+                        <span className="font-bold text-sm">{displayText}</span>
+                    </div>
+                </Html>
+            )}
+
             {/* Value on top */}
             <Text
                 position={[0, barHeight + 0.35, 0]}
@@ -424,35 +466,41 @@ function GridTile3D({
     const x = (col - totalCols / 2 + 0.5) * (GRID_TILE + GRID_GAP);
     const z = (row - totalRows / 2 + 0.5) * (GRID_TILE + GRID_GAP);
 
+    const [hovered, setHovered] = useState(false);
+
     const targetColor = useMemo(() => {
         if (isChanged) return new THREE.Color("#22c55e");
         if (isPointed) return new THREE.Color("#f59e0b");
+        if (hovered) return new THREE.Color("#f1f5f9");
         const numVal = typeof value === "number" ? value : 0;
         if (numVal === 0) return new THREE.Color("#ffffff");
         if (numVal === 1 || value === true) return new THREE.Color("#dbeafe");
         return new THREE.Color("#e0e7ff");
-    }, [isChanged, isPointed, value]);
+    }, [isChanged, isPointed, hovered, value]);
 
     useFrame((_, delta) => {
         elapsedRef.current += delta;
-        const speed = LERP_SPEED * delta;
         if (matRef.current) {
-            matRef.current.color.lerp(targetColor, speed);
+            matRef.current.color.lerp(targetColor, delta * 10);
             if (isChanged) {
                 matRef.current.emissiveIntensity = Math.sin(elapsedRef.current * 4) * 0.2 + 0.5;
             } else {
-                matRef.current.emissiveIntensity = THREE.MathUtils.lerp(
-                    matRef.current.emissiveIntensity, 0.5, speed
+                matRef.current.emissiveIntensity = THREE.MathUtils.damp(
+                    matRef.current.emissiveIntensity, hovered ? 0.8 : 0.5, 10, delta
                 );
             }
         }
     });
 
-    const tileHeight = isPointed ? 0.3 : 0.12;
+    const tileHeight = isPointed ? 0.3 : (hovered ? 0.2 : 0.12);
     const displayText = formatCellValue(value);
 
     return (
-        <group position={[x, 0, z]}>
+        <group
+            position={[x, 0, z]}
+            onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
+            onPointerOut={(e) => { e.stopPropagation(); setHovered(false); document.body.style.cursor = 'auto'; }}
+        >
             <RoundedBox args={[GRID_TILE, tileHeight, GRID_TILE]} radius={0.04} smoothness={3}>
                 <meshStandardMaterial
                     ref={matRef}
@@ -472,11 +520,20 @@ function GridTile3D({
                 color="#302a1e"
                 anchorX="center"
                 anchorY="middle"
-                outlineWidth={0.008}
                 outlineColor="#fcfbf9"
             >
                 {displayText}
             </Text>
+
+            {/* Glassmorphic Tooltip on Hover */}
+            {hovered && (
+                <Html position={[0, tileHeight + 0.5, 0]} center zIndexRange={[100, 0]}>
+                    <div className="bg-cream-100/80 backdrop-blur-md border border-cream-200/50 shadow-lg px-3 py-2 rounded-xl text-xs font-mono text-cream-900 pointer-events-none whitespace-nowrap flex flex-col items-center animate-fade-in-up">
+                        <span className="text-[10px] text-cream-500 font-sans uppercase tracking-wider mb-0.5">Cell ({row}, {col})</span>
+                        <span className="font-bold text-sm">{displayText}</span>
+                    </div>
+                </Html>
+            )}
         </group>
     );
 }
@@ -1088,8 +1145,21 @@ function GraphView3D({
         return { x: cx / n, y: cy / n };
     }, [layout]);
 
+    const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+    const [dragOffsets, setDragOffsets] = useState<Record<string, { x: number; y: number }>>({});
+
     // ── Generate curved edge points (quadratic bezier) ──
-    const getEdgePoints = (fromPos: { x: number; y: number }, toPos: { x: number; y: number }) => {
+    const getEdgePoints = (fromId: string, toId: string) => {
+        const fromBase = layout.get(fromId);
+        const toBase = layout.get(toId);
+        if (!fromBase || !toBase) return null;
+
+        const dFrom = dragOffsets[fromId] || { x: 0, y: 0 };
+        const dTo = dragOffsets[toId] || { x: 0, y: 0 };
+
+        const fromPos = { x: fromBase.x + dFrom.x, y: fromBase.y + dFrom.y };
+        const toPos = { x: toBase.x + dTo.x, y: toBase.y + dTo.y };
+
         const NODE_RADIUS = 0.45;
         const dx = toPos.x - fromPos.x;
         const dy = toPos.y - fromPos.y;
@@ -1142,10 +1212,7 @@ function GraphView3D({
         <group position={[xOffset, 0, zOffset]}>
             {/* Edges — curved bezier lines */}
             {edges.map(({ from, to }) => {
-                const fromPos = layout.get(from);
-                const toPos = layout.get(to);
-                if (!fromPos || !toPos) return null;
-                const points = getEdgePoints(fromPos, toPos);
+                const points = getEdgePoints(from, to);
                 if (!points) return null;
                 const isTraversed = visitedSet.has(from) && visitedSet.has(to);
                 return (
@@ -1167,6 +1234,8 @@ function GraphView3D({
 
                 let nodeColor = "#f8fafc";
                 let emissive = "#cbd5e1";
+                const isHovered = hoveredNode === id;
+
                 if (id === currentStr) {
                     nodeColor = "#ffedd5";
                     emissive = "#f97316";
@@ -1176,36 +1245,63 @@ function GraphView3D({
                 } else if (queueSet.has(id)) {
                     nodeColor = "#dbeafe";
                     emissive = "#3b82f6";
+                } else if (isHovered) {
+                    nodeColor = "#ffffff";
+                    emissive = "#e2e8f0";
                 }
 
+                // Add slight bobbing and physical pop on hover
+                const zHover = isHovered ? 0.3 : 0;
+                const scale = isHovered ? 1.15 : 1.0;
+
                 return (
-                    <group key={id} position={[pos.x, pos.y, 0]}>
-                        <mesh castShadow>
-                            <sphereGeometry args={[0.4, 24, 24]} />
-                            <meshPhysicalMaterial
-                                color={nodeColor}
-                                emissive={emissive}
-                                emissiveIntensity={0.6}
-                                roughness={0.15}
-                                transmission={0.8}
-                                thickness={0.5}
-                                ior={1.4}
-                                clearcoat={0.8}
-                                clearcoatRoughness={0.1}
-                            />
-                        </mesh>
-                        <Text
-                            position={[0, 0, 0.45]}
-                            fontSize={0.32}
-                            color="#302a1e"
-                            anchorX="center"
-                            anchorY="middle"
-                            outlineWidth={0.015}
-                            outlineColor="#fcfbf9"
+                    <DraggableGroup
+                        key={id}
+                        initialPosition={[pos.x, pos.y, zHover]}
+                        onDrag={(dx, dy) => setDragOffsets(prev => ({ ...prev, [id]: { x: dx, y: dy } }))}
+                    >
+                        <group
+                            scale={scale}
+                            onPointerOver={(e) => { e.stopPropagation(); setHoveredNode(id); document.body.style.cursor = 'pointer'; }}
+                            onPointerOut={(e) => { e.stopPropagation(); setHoveredNode(null); document.body.style.cursor = 'auto'; }}
                         >
-                            {id}
-                        </Text>
-                    </group>
+                            <mesh castShadow>
+                                <sphereGeometry args={[0.4, 24, 24]} />
+                                <meshPhysicalMaterial
+                                    color={nodeColor}
+                                    emissive={emissive}
+                                    emissiveIntensity={0.6}
+                                    roughness={0.15}
+                                    transmission={0.8}
+                                    thickness={0.5}
+                                    ior={1.4}
+                                    clearcoat={0.8}
+                                    clearcoatRoughness={0.1}
+                                />
+                            </mesh>
+                            <Text
+                                position={[0, 0, 0.45]}
+                                fontSize={0.32}
+                                color="#302a1e"
+                                anchorX="center"
+                                anchorY="middle"
+                                outlineWidth={0.015}
+                                outlineColor="#fcfbf9"
+                            >
+                                {id}
+                            </Text>
+
+                            {/* Glassmorphic Tooltip on Hover */}
+                            {isHovered && (
+                                <Html position={[0, 0.7, 0]} center zIndexRange={[100, 0]}>
+                                    <div className="bg-cream-100/80 backdrop-blur-md border border-cream-200/50 shadow-lg px-3 py-2 rounded-xl text-xs font-mono text-cream-900 pointer-events-none whitespace-nowrap flex flex-col items-center animate-fade-in-up">
+                                        <span className="text-[10px] text-cream-500 font-sans uppercase tracking-wider mb-0.5">Node</span>
+                                        <span className="font-bold text-sm">{id}</span>
+                                    </div>
+                                </Html>
+                            )}
+                        </group>
+                    </DraggableGroup>
                 );
             })}
         </group>
@@ -1285,7 +1381,6 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
     const allArrayLike = [...plainArrays, ...stacks, ...queues];
 
     // ─── Layout Strategy ───
-    const ARRAY_Y_GAP = 5;
     const hasGraphs = adjLists.length > 0;
 
     const pointedIndices = useMemo(() => {
@@ -1294,18 +1389,69 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
         return s;
     }, [pointerMap]);
 
-    // Each array-like structure gets a Y position going downward
-    let layoutIdx = 0;
-    const plainArrayYPositions = plainArrays.map(() => -(layoutIdx++) * ARRAY_Y_GAP);
-    const stackYPositions = stacks.map(() => -(layoutIdx++) * ARRAY_Y_GAP);
-    const queueYPositions = queues.map(() => -(layoutIdx++) * ARRAY_Y_GAP);
-    const linkedListYPositions = linkedLists.map(() => -(layoutIdx++) * ARRAY_Y_GAP);
-
     // Place graph to the RIGHT of arrays (X-axis offset)
     const maxArrayWidth = allArrayLike.length > 0
         ? Math.max(...allArrayLike.map(a => (a.value as unknown[]).length * BAR_SPACING))
         : 0;
     const GRAPH_X_OFFSET = hasGraphs ? maxArrayWidth / 2 + 8 : 0;
+
+    // ─── POSITIVE Y LAYOUT (everything ABOVE the grid floor) ───
+    // Build upward from Y=1 (just above grid)
+    let currentYBase = 1;
+    const SPACING_1D = 5;
+
+    // Dicts at bottom
+    const dictYPositions = dicts.map((d) => {
+        const numEntries = Math.min(Object.keys(d.value).length, 20);
+        const rows = Math.ceil(numEntries / 6) || 1;
+        const dictHeight = rows * 1.5 + 4;
+        const y = currentYBase;
+        currentYBase += dictHeight;
+        return y;
+    });
+
+    // Grids
+    const gridYPositions = grids.map((grid) => {
+        const totalRows = grid.value.length;
+        const gridHeight = totalRows * (GRID_TILE + GRID_GAP) + 5;
+        const y = currentYBase;
+        currentYBase += gridHeight;
+        return y;
+    });
+
+    // Linked lists
+    const linkedListYPositions = linkedLists.map(() => {
+        const y = currentYBase;
+        currentYBase += SPACING_1D;
+        return y;
+    });
+
+    // Queues
+    const queueYPositions = queues.map(() => {
+        const y = currentYBase;
+        currentYBase += SPACING_1D;
+        return y;
+    });
+
+    // Stacks
+    const stackYPositions = stacks.map((s) => {
+        const y = currentYBase;
+        const stackHeight = Math.max(SPACING_1D, (s.value as unknown[]).length * 0.8 + 3);
+        currentYBase += stackHeight;
+        return y;
+    });
+
+    // Arrays
+    const plainArrayYPositions = plainArrays.map((arr) => {
+        const y = currentYBase;
+        const maxVal = Math.max(1, ...(arr.value as unknown[]).map(v => typeof v === 'number' ? Math.abs(v) : 1));
+        const extraHeight = maxVal > 5 ? 2 : 0;
+        currentYBase += (SPACING_1D + extraHeight);
+        return y;
+    });
+
+    // Scalars go at the very top
+    const scalarYTop = currentYBase + 2;
 
     return (
         <group>
@@ -1322,7 +1468,7 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
                                 name={s.name}
                                 value={s.value}
                                 xPos={xPos}
-                                yPos={3.5}
+                                yPos={scalarYTop}
                                 isChanged={isChanged}
                             />
                         );
@@ -1436,9 +1582,9 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
             {/* ─── 2D Grids (DP tables, boards) ─── */}
             {grids.map((grid, gridIdx) => {
                 const totalRows = grid.value.length;
-                const totalCols = grid.value[0]?.length || 0;
-                // Place grids below all arrays
-                const yBase = -(layoutIdx) * ARRAY_Y_GAP - gridIdx * (totalRows * (GRID_TILE + GRID_GAP) + 4);
+                const totalCols = (grid.value[0] as unknown[])?.length || 0;
+                // Place grids dynamically
+                const yBase = gridYPositions[gridIdx];
 
                 const iVal = step.stack.i as number | undefined;
                 const jVal = step.stack.j as number | undefined;
@@ -1485,7 +1631,7 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
             })}
 
             {/* ─── Graph (adjacency list) — placed to the right of arrays ─── */}
-            {adjLists.map((g) => {
+            {adjLists.map((g, idx) => {
                 const rawVisited = step.stack.visited;
                 const visited = Array.isArray(rawVisited)
                     ? rawVisited
@@ -1500,8 +1646,12 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
                         : [];
                 const current = step.stack.current ?? step.stack.node ?? step.stack.curr;
 
+                // Spread multiple graphs along X axis
+                const graphSpacing = 15;
+                const xPos = GRAPH_X_OFFSET + idx * graphSpacing;
+
                 return (
-                    <DraggableGroup key={g.name} initialPosition={[GRAPH_X_OFFSET, 0, 0]}>
+                    <DraggableGroup key={g.name} initialPosition={[xPos, 3, 0]}>
                         <GraphView3D
                             adj={g.value}
                             visited={visited}
@@ -1516,7 +1666,7 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
 
             {/* ─── Dictionaries (non-graph) ─── */}
             {dicts.map((d, idx) => {
-                const yBase = -(layoutIdx) * ARRAY_Y_GAP - grids.length * 6 - idx * 4;
+                const yBase = dictYPositions[idx];
                 return (
                     <DraggableGroup key={d.name} initialPosition={[0, yBase, 0]}>
                         <DictView3D
