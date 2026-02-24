@@ -15,20 +15,41 @@ const GRID_TILE = 0.9;
 const GRID_GAP = 0.1;
 const GRAPH_SCALE = 2.2;
 
+// ─── Persistent drag position store (survives re-renders / step changes) ─
+const dragPositionStore = new Map<string, [number, number, number]>();
+
 // ─── DraggableGroup ─ wraps children in a draggable 3D group ─
 function DraggableGroup({
     children,
     initialPosition = [0, 0, 0],
+    persistKey,
     onDrag,
 }: {
     children: React.ReactNode;
     initialPosition?: [number, number, number];
+    persistKey?: string; // unique key to persist drag position across step changes
     onDrag?: (dx: number, dy: number, dz: number) => void;
 }) {
     const groupRef = useRef<THREE.Group>(null);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { camera, gl, controls } = useThree() as any;
-    const [offset, setOffset] = useState<[number, number, number]>([0, 0, 0]);
+
+    // Restore saved offset from the persistent store, or start at [0,0,0]
+    const savedOffset = persistKey ? dragPositionStore.get(persistKey) : undefined;
+    const [offset, setOffset] = useState<[number, number, number]>(savedOffset || [0, 0, 0]);
+
+    // Sync offset when persistKey changes (e.g., different structure name on step change)
+    const prevKeyRef = useRef(persistKey);
+    if (persistKey !== prevKeyRef.current) {
+        prevKeyRef.current = persistKey;
+        const stored = persistKey ? dragPositionStore.get(persistKey) : undefined;
+        if (stored && (stored[0] !== offset[0] || stored[1] !== offset[1] || stored[2] !== offset[2])) {
+            setOffset(stored);
+        } else if (!stored && (offset[0] !== 0 || offset[1] !== 0 || offset[2] !== 0)) {
+            setOffset([0, 0, 0]);
+        }
+    }
+
     const dragState = useRef<{
         active: boolean;
         startWorld: THREE.Vector3;
@@ -65,8 +86,10 @@ function DraggableGroup({
             dragState.current.startOffset[2],
         ];
         setOffset(newOffset);
+        // Save to persistent store
+        if (persistKey) dragPositionStore.set(persistKey, newOffset);
         if (onDrag) onDrag(newOffset[0], newOffset[1], newOffset[2]);
-    }, [getWorldPoint, onDrag]);
+    }, [getWorldPoint, onDrag, persistKey]);
 
     const onWindowPointerUp = useCallback(() => {
         if (!dragState.current.active) return;
@@ -104,8 +127,9 @@ function DraggableGroup({
     const handleDoubleClick = useCallback((e: any) => {
         e.stopPropagation();
         setOffset([0, 0, 0]); // Reset to original position
+        if (persistKey) dragPositionStore.delete(persistKey); // Clear persisted position
         if (onDrag) onDrag(0, 0, 0);
-    }, [onDrag]);
+    }, [onDrag, persistKey]);
 
     const pos: [number, number, number] = [
         initialPosition[0] + offset[0],
@@ -464,7 +488,8 @@ function GridTile3D({
     const elapsedRef = useRef(0);
 
     const x = (col - totalCols / 2 + 0.5) * (GRID_TILE + GRID_GAP);
-    const z = (row - totalRows / 2 + 0.5) * (GRID_TILE + GRID_GAP);
+    // Rows go DOWNWARD on Y axis (negative) so the grid faces the user
+    const y = -(row - totalRows / 2 + 0.5) * (GRID_TILE + GRID_GAP);
 
     const [hovered, setHovered] = useState(false);
 
@@ -497,11 +522,11 @@ function GridTile3D({
 
     return (
         <group
-            position={[x, 0, z]}
+            position={[x, y, 0]}
             onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
             onPointerOut={(e) => { e.stopPropagation(); setHovered(false); document.body.style.cursor = 'auto'; }}
         >
-            <RoundedBox args={[GRID_TILE, tileHeight, GRID_TILE]} radius={0.04} smoothness={3}>
+            <RoundedBox args={[GRID_TILE, GRID_TILE, tileHeight]} radius={0.04} smoothness={3}>
                 <meshStandardMaterial
                     ref={matRef}
                     color="#ffffff"
@@ -514,8 +539,7 @@ function GridTile3D({
                 />
             </RoundedBox>
             <Text
-                position={[0, tileHeight / 2 + 0.12, 0]}
-                rotation={[-Math.PI / 4, 0, 0]}
+                position={[0, 0, tileHeight / 2 + 0.05]}
                 fontSize={0.22}
                 color="#302a1e"
                 anchorX="center"
@@ -527,7 +551,7 @@ function GridTile3D({
 
             {/* Glassmorphic Tooltip on Hover */}
             {hovered && (
-                <Html position={[0, tileHeight + 0.5, 0]} center zIndexRange={[100, 0]}>
+                <Html position={[0, 0, tileHeight + 0.5]} center zIndexRange={[100, 0]}>
                     <div className="bg-cream-100/80 backdrop-blur-md border border-cream-200/50 shadow-lg px-3 py-2 rounded-xl text-xs font-mono text-cream-900 pointer-events-none whitespace-nowrap flex flex-col items-center animate-fade-in-up">
                         <span className="text-[10px] text-cream-500 font-sans uppercase tracking-wider mb-0.5">Cell ({row}, {col})</span>
                         <span className="font-bold text-sm">{displayText}</span>
@@ -1381,7 +1405,6 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
     const allArrayLike = [...plainArrays, ...stacks, ...queues];
 
     // ─── Layout Strategy ───
-    const hasGraphs = adjLists.length > 0;
 
     const pointedIndices = useMemo(() => {
         const s = new Set<number>();
@@ -1389,75 +1412,88 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
         return s;
     }, [pointerMap]);
 
-    // Place graph to the RIGHT of arrays (X-axis offset)
+    // Calculate column widths for side-by-side layout
     const maxArrayWidth = allArrayLike.length > 0
         ? Math.max(...allArrayLike.map(a => (a.value as unknown[]).length * BAR_SPACING))
         : 0;
-    const GRAPH_X_OFFSET = hasGraphs ? maxArrayWidth / 2 + 8 : 0;
 
-    // ─── POSITIVE Y LAYOUT (everything ABOVE the grid floor) ───
-    // Build upward from Y=1 (just above grid)
-    let currentYBase = 1;
-    const SPACING_1D = 5;
+    // ─── COMPACT CENTERED DASHBOARD LAYOUT ───
+    // Left column (X=0): arrays, stacks, queues, linked lists
+    // Middle column (RIGHT_COL_X): grids, dicts
+    // Far right (GRAPH_X_OFFSET): graphs — placed BEYOND the middle column
+    // Top center: scalars
 
-    // Dicts at bottom
+    const ITEM_SPACING = 4;
+    // Right column offset: past the array width + gap
+    const RIGHT_COL_X = maxArrayWidth / 2 + 5;
+    // Estimate right column width (for grid/dict sizing)
+    const maxGridWidth = grids.length > 0
+        ? Math.max(...grids.map(g => ((g.value[0] as unknown[])?.length || 1) * (GRID_TILE + GRID_GAP)))
+        : 0;
+    const maxDictWidth = dicts.length > 0 ? 6 : 0; // dicts are typically ~6 units wide
+    const rightColWidth = Math.max(maxGridWidth, maxDictWidth, 0);
+
+    // Graphs go BEYOND both columns
+    const hasGraphs = adjLists.length > 0;
+    const hasRightCol = grids.length > 0 || dicts.length > 0;
+    const GRAPH_X_OFFSET = hasGraphs
+        ? (hasRightCol ? RIGHT_COL_X + rightColWidth + 6 : maxArrayWidth / 2 + 8)
+        : 0;
+
+    // Left column — arrays, stacks, queues, linked lists
+    let leftY = 1;
+    const plainArrayYPositions = plainArrays.map((arr) => {
+        const y = leftY;
+        const maxVal = Math.max(1, ...(arr.value as unknown[]).map(v => typeof v === 'number' ? Math.abs(v) : 1));
+        leftY += Math.min(ITEM_SPACING + (maxVal > 5 ? 1 : 0), 6);
+        return y;
+    });
+    const stackYPositions = stacks.map((s) => {
+        const y = leftY;
+        leftY += Math.min(ITEM_SPACING, (s.value as unknown[]).length * 0.6 + 2);
+        return y;
+    });
+    const queueYPositions = queues.map(() => {
+        const y = leftY;
+        leftY += ITEM_SPACING;
+        return y;
+    });
+    const linkedListYPositions = linkedLists.map(() => {
+        const y = leftY;
+        leftY += ITEM_SPACING;
+        return y;
+    });
+
+    // Right column — grids, dicts (offset on X axis)
+    let rightY = 1;
+    const gridYPositions = grids.map((grid) => {
+        const totalRows = grid.value.length;
+        const gridHeight = totalRows * (GRID_TILE + GRID_GAP) + 3;
+        const y = rightY;
+        rightY += gridHeight;
+        return y;
+    });
+
     const dictYPositions = dicts.map((d) => {
         const numEntries = Math.min(Object.keys(d.value).length, 20);
         const rows = Math.ceil(numEntries / 6) || 1;
-        const dictHeight = rows * 1.5 + 4;
-        const y = currentYBase;
-        currentYBase += dictHeight;
+        const dictHeight = rows * 1.5 + 3;
+        const y = rightY;
+        rightY += dictHeight;
         return y;
     });
 
-    // Grids
-    const gridYPositions = grids.map((grid) => {
-        const totalRows = grid.value.length;
-        const gridHeight = totalRows * (GRID_TILE + GRID_GAP) + 5;
-        const y = currentYBase;
-        currentYBase += gridHeight;
-        return y;
-    });
+    // Scalars at the top, centered — positioned just above the tallest column
+    const tallestColumn = Math.max(leftY, rightY);
+    const scalarYTop = tallestColumn + 1;
 
-    // Linked lists
-    const linkedListYPositions = linkedLists.map(() => {
-        const y = currentYBase;
-        currentYBase += SPACING_1D;
-        return y;
-    });
 
-    // Queues
-    const queueYPositions = queues.map(() => {
-        const y = currentYBase;
-        currentYBase += SPACING_1D;
-        return y;
-    });
-
-    // Stacks
-    const stackYPositions = stacks.map((s) => {
-        const y = currentYBase;
-        const stackHeight = Math.max(SPACING_1D, (s.value as unknown[]).length * 0.8 + 3);
-        currentYBase += stackHeight;
-        return y;
-    });
-
-    // Arrays
-    const plainArrayYPositions = plainArrays.map((arr) => {
-        const y = currentYBase;
-        const maxVal = Math.max(1, ...(arr.value as unknown[]).map(v => typeof v === 'number' ? Math.abs(v) : 1));
-        const extraHeight = maxVal > 5 ? 2 : 0;
-        currentYBase += (SPACING_1D + extraHeight);
-        return y;
-    });
-
-    // Scalars go at the very top
-    const scalarYTop = currentYBase + 2;
 
     return (
         <group>
             {/* ─── Scalars at the top ─── */}
             {scalars.length > 0 && (
-                <DraggableGroup initialPosition={[0, 0, 0]}>
+                <DraggableGroup persistKey="drag_scalars" initialPosition={[0, 0, 0]}>
                     {scalars.map((s, idx) => {
                         const isChanged = prevStep ? JSON.stringify(prevStep.stack[s.name]) !== JSON.stringify(s.value) : false;
                         const xSpacing = 2.5;
@@ -1484,7 +1520,7 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
                 const xCenter = (n * BAR_SPACING) / 2 - BAR_SPACING / 2;
 
                 return (
-                    <DraggableGroup key={arr.name} initialPosition={[0, yPos, 0]}>
+                    <DraggableGroup key={arr.name} persistKey={`drag_arr_${arr.name}`} initialPosition={[0, yPos, 0]}>
                         <Text
                             position={[0, 2.8, 0]}
                             fontSize={0.38}
@@ -1540,7 +1576,7 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
                     ? (prevStep.stack[s.name] as unknown[] | undefined) ?? null
                     : null;
                 return (
-                    <DraggableGroup key={s.name} initialPosition={[0, 0, 0]}>
+                    <DraggableGroup key={s.name} persistKey={`drag_stack_${s.name}`} initialPosition={[0, 0, 0]}>
                         <Stack3D
                             name={s.name}
                             items={s.value}
@@ -1557,7 +1593,7 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
                     ? (prevStep.stack[q.name] as unknown[] | undefined) ?? null
                     : null;
                 return (
-                    <DraggableGroup key={q.name} initialPosition={[0, 0, 0]}>
+                    <DraggableGroup key={q.name} persistKey={`drag_queue_${q.name}`} initialPosition={[0, 0, 0]}>
                         <Queue3D
                             name={q.name}
                             items={q.value}
@@ -1570,7 +1606,7 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
 
             {/* ─── Linked Lists — horizontal chain (emerald) ─── */}
             {linkedLists.map((ll, idx) => (
-                <DraggableGroup key={ll.name} initialPosition={[0, 0, 0]}>
+                <DraggableGroup key={ll.name} persistKey={`drag_ll_${ll.name}`} initialPosition={[0, 0, 0]}>
                     <LinkedListView3D
                         name={ll.name}
                         values={ll.values}
@@ -1591,9 +1627,9 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
                 const wVal = step.stack.w as number | undefined;
 
                 return (
-                    <DraggableGroup key={grid.name} initialPosition={[0, yBase, 0]}>
+                    <DraggableGroup key={grid.name} persistKey={`drag_grid_${grid.name}`} initialPosition={[hasRightCol ? RIGHT_COL_X : 0, yBase, 0]}>
                         <Text
-                            position={[0, 1.2, -totalRows * (GRID_TILE + GRID_GAP) / 2 - 0.5]}
+                            position={[0, totalRows * (GRID_TILE + GRID_GAP) / 2 + 0.5, 0]}
                             fontSize={0.32}
                             color="#38bdf8"
                             anchorX="center"
@@ -1651,7 +1687,7 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
                 const xPos = GRAPH_X_OFFSET + idx * graphSpacing;
 
                 return (
-                    <DraggableGroup key={g.name} initialPosition={[xPos, 3, 0]}>
+                    <DraggableGroup key={g.name} persistKey={`drag_graph_${g.name}`} initialPosition={[xPos, 3, 0]}>
                         <GraphView3D
                             adj={g.value}
                             visited={visited}
@@ -1668,7 +1704,7 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
             {dicts.map((d, idx) => {
                 const yBase = dictYPositions[idx];
                 return (
-                    <DraggableGroup key={d.name} initialPosition={[0, yBase, 0]}>
+                    <DraggableGroup key={d.name} persistKey={`drag_dict_${d.name}`} initialPosition={[hasRightCol ? RIGHT_COL_X : 0, yBase, 0]}>
                         <DictView3D
                             name={d.name}
                             data={d.value}

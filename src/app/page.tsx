@@ -452,7 +452,7 @@ export default function Home() {
               <Scene />
             ) : (
               currentStep ? (
-                <Visualization2D step={currentStep} prevStep={prevStep} vizCtx={vizCtx} />
+                <Visualization2D step={currentStep} prevStep={prevStep} vizCtx={vizCtx} isFullscreen={isFullscreen} />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-cream-400 text-sm font-medium">
                   Run your code to see the visualization

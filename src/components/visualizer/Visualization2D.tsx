@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { TraceStep } from "@/lib/interpreter/schema";
 import { VizContext } from "@/lib/vizDetector";
 import { useGraphLayout } from "@/hooks/useGraphLayout";
@@ -9,6 +9,7 @@ interface Visualization2DProps {
     step: TraceStep;
     prevStep: TraceStep | null;
     vizCtx: VizContext;
+    isFullscreen?: boolean;
 }
 
 // ─── Color Palette ───────────────────────────────────────────
@@ -621,8 +622,34 @@ function getPointerColor(idx: number): string {
 }
 
 // ─── Main 2D Visualization ────────────────────────────────────
-export function Visualization2D({ step, prevStep, vizCtx }: Visualization2DProps) {
+export function Visualization2D({ step, prevStep, vizCtx, isFullscreen = false }: Visualization2DProps) {
     const sortedVars = useMemo(() => getSortedVariables(step, vizCtx), [step, vizCtx]);
+
+    // ─── Auto-scale to fit viewport in fullscreen mode ───
+    const containerRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
+    const [scale, setScale] = useState(1);
+
+    const computeScale = useCallback(() => {
+        if (!isFullscreen || !containerRef.current || !contentRef.current) {
+            setScale(1);
+            return;
+        }
+        const containerH = containerRef.current.clientHeight;
+        const contentH = contentRef.current.scrollHeight;
+        if (contentH > containerH && containerH > 0) {
+            setScale(Math.max(0.4, containerH / contentH));
+        } else {
+            setScale(1);
+        }
+    }, [isFullscreen]);
+
+    useEffect(() => {
+        computeScale();
+        // Re-compute on window resize
+        window.addEventListener('resize', computeScale);
+        return () => window.removeEventListener('resize', computeScale);
+    }, [computeScale, step]);
 
     // Build pointer map for the primary array
     const pointerMap = useMemo(() => {
@@ -673,206 +700,212 @@ export function Visualization2D({ step, prevStep, vizCtx }: Visualization2DProps
     }
 
     return (
-        <div style={{
+        <div ref={containerRef} style={{
             width: "100%",
             height: "100%",
-            overflow: "auto",
-            padding: 20,
+            overflow: isFullscreen ? "hidden" : "auto",
             background: COLORS.bg,
             fontFamily: "'Inter', system-ui, sans-serif",
-            display: "flex",
-            flexDirection: "column",
-            gap: 16,
         }}>
-            {/* Step Header */}
-            <div style={{
+            <div ref={contentRef} style={{
+                padding: isFullscreen ? 12 : 20,
                 display: "flex",
-                alignItems: "center",
-                gap: 12,
-                paddingBottom: 8,
-                borderBottom: `1px solid ${COLORS.cardBorder}`,
+                flexDirection: "column",
+                gap: isFullscreen ? 8 : 16,
+                transform: isFullscreen && scale < 1 ? `scale(${scale})` : undefined,
+                transformOrigin: "top left",
+                width: isFullscreen && scale < 1 ? `${100 / scale}%` : "100%",
             }}>
-                <span style={{
-                    fontSize: 11,
-                    color: COLORS.textMuted,
-                    fontFamily: "monospace",
+                {/* Step Header */}
+                <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    paddingBottom: 8,
+                    borderBottom: `1px solid ${COLORS.cardBorder}`,
                 }}>
-                    Line {step.line}
-                </span>
-                <div style={{ flex: 1 }} />
-                <span style={{
-                    fontSize: 10,
-                    color: COLORS.textMuted,
-                }}>
-                    {Object.keys(step.stack).length} variables in scope
-                </span>
-            </div>
-
-            {/* Scalar Variables — shown first as badges */}
-            {scalars.length > 0 && (
-                <div>
-                    <div style={{
+                    <span style={{
+                        fontSize: 11,
+                        color: COLORS.textMuted,
+                        fontFamily: "monospace",
+                    }}>
+                        Line {step.line}
+                    </span>
+                    <div style={{ flex: 1 }} />
+                    <span style={{
                         fontSize: 10,
                         color: COLORS.textMuted,
-                        textTransform: "uppercase",
-                        letterSpacing: "1px",
-                        marginBottom: 6,
-                        fontWeight: 600,
                     }}>
-                        Variables
+                        {Object.keys(step.stack).length} variables in scope
+                    </span>
+                </div>
+
+                {/* Scalar Variables — shown first as badges */}
+                {scalars.length > 0 && (
+                    <div>
+                        <div style={{
+                            fontSize: 10,
+                            color: COLORS.textMuted,
+                            textTransform: "uppercase",
+                            letterSpacing: "1px",
+                            marginBottom: 6,
+                            fontWeight: 600,
+                        }}>
+                            Variables
+                        </div>
+                        <div style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: 6,
+                        }}>
+                            {scalars.map(s => (
+                                <ScalarBadge
+                                    key={s.name}
+                                    name={s.name}
+                                    value={s.value}
+                                    prevValue={prevStep?.stack[s.name]}
+                                    isPointer={vizCtx.pointerVars.includes(s.name)}
+                                />
+                            ))}
+                        </div>
                     </div>
-                    <div style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: 6,
-                    }}>
-                        {scalars.map(s => (
-                            <ScalarBadge
-                                key={s.name}
-                                name={s.name}
-                                value={s.value}
-                                prevValue={prevStep?.stack[s.name]}
-                                isPointer={vizCtx.pointerVars.includes(s.name)}
+                )}
+
+                {/* Arrays — rendered as cell rows */}
+                {arrays.length > 0 && (
+                    <div>
+                        <div style={{
+                            fontSize: 10,
+                            color: COLORS.textMuted,
+                            textTransform: "uppercase",
+                            letterSpacing: "1px",
+                            marginBottom: 6,
+                            fontWeight: 600,
+                        }}>
+                            Data Structures
+                        </div>
+                        {arrays.map(arr => {
+                            const isPrimary = arr.name === vizCtx.primaryVar;
+                            const prevArr = prevStep?.stack[arr.name] as unknown[] | undefined;
+                            // Only show pointers for the primary array
+                            const arrPointers = isPrimary ? pointerMap : [];
+                            return (
+                                <ArrayRow
+                                    key={arr.name}
+                                    name={arr.name}
+                                    data={arr.value}
+                                    prevData={prevArr}
+                                    pointers={arrPointers}
+                                    isPrimary={isPrimary}
+                                />
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* Linked Lists — rendered as node chains */}
+                {linkedLists.length > 0 && (
+                    <div>
+                        <div style={{
+                            fontSize: 10,
+                            color: COLORS.textMuted,
+                            textTransform: "uppercase",
+                            letterSpacing: "1px",
+                            marginBottom: 6,
+                            fontWeight: 600,
+                        }}>
+                            Linked Lists
+                        </div>
+                        {linkedLists.map(ll => (
+                            <LinkedListView2D
+                                key={ll.name}
+                                name={ll.name}
+                                values={ll.values}
                             />
                         ))}
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* Arrays — rendered as cell rows */}
-            {arrays.length > 0 && (
-                <div>
-                    <div style={{
-                        fontSize: 10,
-                        color: COLORS.textMuted,
-                        textTransform: "uppercase",
-                        letterSpacing: "1px",
-                        marginBottom: 6,
-                        fontWeight: 600,
-                    }}>
-                        Data Structures
+                {/* Dictionaries / Graphs */}
+                {dicts.length > 0 && (
+                    <div>
+                        {dicts.map(d => {
+                            // Extract graph traversal state from step stack
+                            const graphVisited = step.stack["visited"] as unknown[] | undefined;
+                            const graphQueue = step.stack["queue"] as unknown[] | undefined;
+                            const graphCurrent = step.stack["current"] ?? step.stack["node"] ?? step.stack["curr"];
+                            return (
+                                <DictView
+                                    key={d.name}
+                                    name={d.name}
+                                    data={d.value}
+                                    visited={graphVisited}
+                                    queue={graphQueue}
+                                    current={graphCurrent}
+                                />
+                            );
+                        })}
                     </div>
-                    {arrays.map(arr => {
-                        const isPrimary = arr.name === vizCtx.primaryVar;
-                        const prevArr = prevStep?.stack[arr.name] as unknown[] | undefined;
-                        // Only show pointers for the primary array
-                        const arrPointers = isPrimary ? pointerMap : [];
-                        return (
-                            <ArrayRow
-                                key={arr.name}
-                                name={arr.name}
-                                data={arr.value}
-                                prevData={prevArr}
-                                pointers={arrPointers}
-                                isPrimary={isPrimary}
-                            />
-                        );
-                    })}
-                </div>
-            )}
+                )}
 
-            {/* Linked Lists — rendered as node chains */}
-            {linkedLists.length > 0 && (
-                <div>
-                    <div style={{
-                        fontSize: 10,
-                        color: COLORS.textMuted,
-                        textTransform: "uppercase",
-                        letterSpacing: "1px",
-                        marginBottom: 6,
-                        fontWeight: 600,
-                    }}>
-                        Linked Lists
+                {/* Graph Visualizations (adjacency lists from trees/graphs) */}
+                {adjLists.length > 0 && (
+                    <div>
+                        <div style={{
+                            fontSize: 10,
+                            color: COLORS.textMuted,
+                            textTransform: "uppercase",
+                            letterSpacing: "1px",
+                            marginBottom: 6,
+                            fontWeight: 600,
+                        }}>
+                            Graphs
+                        </div>
+                        {adjLists.map(g => {
+                            const graphVisited = step.stack["visited"] as unknown[] | undefined;
+                            const graphQueue = step.stack["queue"] as unknown[] | undefined;
+                            const graphCurrent = step.stack["current"] ?? step.stack["node"] ?? step.stack["curr"];
+                            return (
+                                <GraphView2D
+                                    key={g.name}
+                                    name={g.name}
+                                    adj={g.value as Record<string, number[]>}
+                                    visited={graphVisited}
+                                    queue={graphQueue}
+                                    current={graphCurrent}
+                                />
+                            );
+                        })}
                     </div>
-                    {linkedLists.map(ll => (
-                        <LinkedListView2D
-                            key={ll.name}
-                            name={ll.name}
-                            values={ll.values}
-                        />
-                    ))}
-                </div>
-            )}
+                )}
 
-            {/* Dictionaries / Graphs */}
-            {dicts.length > 0 && (
-                <div>
-                    {dicts.map(d => {
-                        // Extract graph traversal state from step stack
-                        const graphVisited = step.stack["visited"] as unknown[] | undefined;
-                        const graphQueue = step.stack["queue"] as unknown[] | undefined;
-                        const graphCurrent = step.stack["current"] ?? step.stack["node"] ?? step.stack["curr"];
-                        return (
-                            <DictView
-                                key={d.name}
-                                name={d.name}
-                                data={d.value}
-                                visited={graphVisited}
-                                queue={graphQueue}
-                                current={graphCurrent}
-                            />
-                        );
-                    })}
-                </div>
-            )}
-
-            {/* Graph Visualizations (adjacency lists from trees/graphs) */}
-            {adjLists.length > 0 && (
-                <div>
+                {/* Stdout */}
+                {step.stdout && (
                     <div style={{
-                        fontSize: 10,
-                        color: COLORS.textMuted,
-                        textTransform: "uppercase",
-                        letterSpacing: "1px",
-                        marginBottom: 6,
-                        fontWeight: 600,
+                        padding: 8,
+                        borderRadius: 6,
+                        background: "#020617",
+                        border: `1px solid ${COLORS.cardBorder}`,
+                        fontSize: 11,
+                        fontFamily: "monospace",
+                        color: COLORS.textDim,
+                        whiteSpace: "pre-wrap",
+                        maxHeight: 80,
+                        overflow: "auto",
                     }}>
-                        Graphs
+                        <div style={{
+                            fontSize: 9,
+                            color: COLORS.textMuted,
+                            textTransform: "uppercase",
+                            letterSpacing: "1px",
+                            marginBottom: 4,
+                        }}>
+                            stdout
+                        </div>
+                        {step.stdout}
                     </div>
-                    {adjLists.map(g => {
-                        const graphVisited = step.stack["visited"] as unknown[] | undefined;
-                        const graphQueue = step.stack["queue"] as unknown[] | undefined;
-                        const graphCurrent = step.stack["current"] ?? step.stack["node"] ?? step.stack["curr"];
-                        return (
-                            <GraphView2D
-                                key={g.name}
-                                name={g.name}
-                                adj={g.value as Record<string, number[]>}
-                                visited={graphVisited}
-                                queue={graphQueue}
-                                current={graphCurrent}
-                            />
-                        );
-                    })}
-                </div>
-            )}
-
-            {/* Stdout */}
-            {step.stdout && (
-                <div style={{
-                    padding: 8,
-                    borderRadius: 6,
-                    background: "#020617",
-                    border: `1px solid ${COLORS.cardBorder}`,
-                    fontSize: 11,
-                    fontFamily: "monospace",
-                    color: COLORS.textDim,
-                    whiteSpace: "pre-wrap",
-                    maxHeight: 80,
-                    overflow: "auto",
-                }}>
-                    <div style={{
-                        fontSize: 9,
-                        color: COLORS.textMuted,
-                        textTransform: "uppercase",
-                        letterSpacing: "1px",
-                        marginBottom: 4,
-                    }}>
-                        stdout
-                    </div>
-                    {step.stdout}
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 }
