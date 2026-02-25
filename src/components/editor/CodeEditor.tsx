@@ -10,7 +10,7 @@ interface CodeEditorProps {
 
 export function CodeEditor({ code, language, onChange }: CodeEditorProps) {
     return (
-        <div className="w-full h-full border-r border-cream-200">
+        <div className="w-full h-full">
             <Editor
                 height="100%"
                 defaultLanguage={language}

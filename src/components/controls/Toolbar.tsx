@@ -12,12 +12,12 @@ export function Toolbar({ onExecute, isExecuting }: ToolbarProps) {
     const { nextStep, prevStep, reset, trace } = useTraceStore();
 
     return (
-        <div className="flex items-center gap-4 p-2 bg-transparent border-b border-cream-200">
+        <div className="flex items-center gap-4 p-2 bg-transparent">
             {/* Single Run & Visualize button — executes code and auto-starts animation */}
             <button
                 onClick={onExecute}
                 disabled={isExecuting}
-                className="flex items-center gap-2 px-4 py-1.5 bg-cream-800 hover:bg-cream-900 disabled:bg-cream-300 text-cream-50 shadow-sm rounded-md text-sm font-medium transition-colors"
+                className="flex items-center gap-2 px-4 py-2 neu-raised text-sm font-bold text-[var(--accent-cyan)] transition-all disabled:opacity-40"
             >
                 {isExecuting ? (
                     <>
@@ -32,14 +32,14 @@ export function Toolbar({ onExecute, isExecuting }: ToolbarProps) {
                 )}
             </button>
 
-            <div className="h-6 w-[1px] bg-cream-300 mx-2" />
+            <div className="h-6 w-[2px] rounded-full neu-pressed mx-2" />
 
             {/* Step controls — manual stepping */}
             <div className="flex items-center gap-1">
                 <button
                     onClick={prevStep}
                     disabled={trace.length === 0}
-                    className="p-2 hover:bg-cream-200 text-cream-600 hover:text-cream-900 rounded-md transition-colors disabled:opacity-40"
+                    className="p-2 neu-raised transition-all disabled:opacity-40 text-slate-500 hover:text-slate-800"
                     title="Step Back"
                 >
                     <SkipBack size={18} />
@@ -48,7 +48,7 @@ export function Toolbar({ onExecute, isExecuting }: ToolbarProps) {
                 <button
                     onClick={nextStep}
                     disabled={trace.length === 0}
-                    className="p-2 hover:bg-cream-200 text-cream-600 hover:text-cream-900 rounded-md transition-colors disabled:opacity-40"
+                    className="p-2 neu-raised transition-all disabled:opacity-40 text-slate-500 hover:text-slate-800"
                     title="Step Forward"
                 >
                     <SkipForward size={18} />
@@ -58,7 +58,7 @@ export function Toolbar({ onExecute, isExecuting }: ToolbarProps) {
             <button
                 onClick={reset}
                 disabled={trace.length === 0}
-                className="p-2 hover:bg-cream-200 text-cream-600 hover:text-cream-900 rounded-md transition-colors ml-auto disabled:opacity-40"
+                className="p-2 neu-raised transition-all ml-auto disabled:opacity-40 text-slate-500 hover:text-slate-800"
                 title="Reset"
             >
                 <RotateCcw size={18} />

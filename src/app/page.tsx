@@ -1,488 +1,296 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { CodeEditor } from "@/components/editor/CodeEditor";
-import { Scene } from "@/components/three/Scene";
-import { Toolbar } from "@/components/controls/Toolbar";
-import { StepSlider } from "@/components/controls/StepSlider";
-import { VariablePanel, StdoutPanel } from "@/components/panels/InfoPanels";
-import { useTraceStore } from "@/lib/store/traceStore";
-import { Visualization2D } from "@/components/visualizer/Visualization2D";
-import { detectVizType } from "@/lib/vizDetector";
+import { useRef } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { motion, useScroll, useTransform, useAnimation } from "framer-motion";
+import { ArrowRight, Code2, Play, Layers, Zap, Bot } from "lucide-react";
 
-// ────────────────────────────────────────────────────────────
-// Algorithm Templates
-// ────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// Interactive Feature Cards (Neumorphic)
+// ─────────────────────────────────────────────────────────────────
+const FeatureCard = ({ title, desc, icon: Icon, delay, children }: any) => {
+    const controls = useAnimation();
 
-const EXAMPLES: Record<string, { label: string; code: string }> = {
-  binary_search: {
-    label: "Binary Search",
-    code: `# Rotated Sorted Array Search
-def search(nums, target):
-    left, right = 0, len(nums) - 1
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.8, delay, ease: [0.16, 1, 0.3, 1] }}
+            onHoverStart={() => controls.start("hover")}
+            onHoverEnd={() => controls.start("initial")}
+            className="group relative neu-raised p-10 overflow-hidden"
+        >
+            <div className="relative z-10 flex flex-col h-full">
+                <div className="w-16 h-16 neu-pressed text-[var(--accent-cyan)] rounded-[1.5rem] flex items-center justify-center mb-8 transition-transform duration-500 group-hover:scale-110">
+                    <Icon size={32} />
+                </div>
+                <h3 className="text-3xl font-bold text-[var(--text-main)] mb-4 tracking-tight">{title}</h3>
+                <p className="text-slate-500 font-medium text-lg leading-relaxed flex-1">{desc}</p>
 
-    while left <= right:
-        mid = (left + right) // 2
-
-        if nums[mid] == target:
-            return mid
-
-        if nums[left] <= nums[mid]:
-            if nums[left] <= target < nums[mid]:
-                right = mid - 1
-            else:
-                left = mid + 1
-        else:
-            if nums[mid] < target <= nums[right]:
-                left = mid + 1
-            else:
-                right = mid - 1
-
-    return -1
-
-result = search([4, 5, 6, 7, 0, 1, 2], 0)`,
-  },
-
-  bubble_sort: {
-    label: "Bubble Sort",
-    code: `# Bubble Sort
-nums = [5, 2, 8, 1, 9, 3]
-
-for i in range(len(nums)):
-    for j in range(0, len(nums) - i - 1):
-        if nums[j] > nums[j + 1]:
-            nums[j], nums[j + 1] = nums[j + 1], nums[j]`,
-  },
-
-  selection_sort: {
-    label: "Selection Sort",
-    code: `# Selection Sort
-nums = [64, 25, 12, 22, 11]
-
-for i in range(len(nums)):
-    min_idx = i
-    for j in range(i + 1, len(nums)):
-        if nums[j] < nums[min_idx]:
-            min_idx = j
-    nums[i], nums[min_idx] = nums[min_idx], nums[i]`,
-  },
-
-  insertion_sort: {
-    label: "Insertion Sort",
-    code: `# Insertion Sort
-nums = [12, 11, 13, 5, 6]
-
-for i in range(1, len(nums)):
-    key = nums[i]
-    j = i - 1
-    while j >= 0 and key < nums[j]:
-        nums[j + 1] = nums[j]
-        j -= 1
-    nums[j + 1] = key`,
-  },
-
-  bfs: {
-    label: "BFS (Graph)",
-    code: `# Breadth-First Search
-graph = {
-    0: [1, 2],
-    1: [0, 3, 4],
-    2: [0, 5],
-    3: [1],
-    4: [1, 5],
-    5: [2, 4]
-}
-
-visited = []
-queue = [0]
-
-while queue:
-    current = queue.pop(0)
-    if current not in visited:
-        visited.append(current)
-        for neighbor in graph[current]:
-            if neighbor not in visited:
-                queue.append(neighbor)`,
-  },
-
-  dfs: {
-    label: "DFS (Graph)",
-    code: `# Depth-First Search
-graph = {
-    0: [1, 3],
-    1: [0, 2, 4],
-    2: [1, 5],
-    3: [0, 4],
-    4: [1, 3, 5, 6],
-    5: [2, 4, 7],
-    6: [4, 7],
-    7: [5, 6]
-}
-
-visited = []
-stack = [0]
-
-while stack:
-    current = stack.pop()
-    if current not in visited:
-        visited.append(current)
-        for neighbor in graph[current]:
-            if neighbor not in visited:
-                stack.append(neighbor)`,
-  },
-
-  dijkstra: {
-    label: "Dijkstra",
-    code: `# Dijkstra's Shortest Path
-graph = {
-    0: [1, 2],
-    1: [0, 3, 4],
-    2: [0, 4],
-    3: [1, 5],
-    4: [1, 2, 5],
-    5: [3, 4]
-}
-
-distances = {0: 0, 1: 999999, 2: 999999, 3: 999999, 4: 999999, 5: 999999}
-visited = []
-queue = [0]
-
-while queue:
-    current = queue.pop(0)
-    if current not in visited:
-        visited.append(current)
-        for neighbor in graph[current]:
-            new_dist = distances[current] + 1
-            if new_dist < distances[neighbor]:
-                distances[neighbor] = new_dist
-            if neighbor not in visited:
-                queue.append(neighbor)`,
-  },
-
-  nqueens: {
-    label: "N-Queens",
-    code: `# N-Queens (4x4)
-board = [
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0]
-]
-
-def is_safe(board, row, col):
-    for i in range(col):
-        if board[row][i] == 1:
-            return False
-    r, c = row, col
-    while r >= 0 and c >= 0:
-        if board[r][c] == 1:
-            return False
-        r -= 1
-        c -= 1
-    r, c = row, col
-    while r < len(board) and c >= 0:
-        if board[r][c] == 1:
-            return False
-        r += 1
-        c -= 1
-    return True
-
-def solve(board, col):
-    if col >= len(board):
-        return True
-    for row in range(len(board)):
-        if is_safe(board, row, col):
-            board[row][col] = 1
-            if solve(board, col + 1):
-                return True
-            board[row][col] = 0
-    return False
-
-solve(board, 0)`,
-  },
-
-  linear_search: {
-    label: "Linear Search",
-    code: `# Linear Search
-nums = [3, 7, 1, 9, 4, 6, 2]
-target = 9
-
-for i in range(len(nums)):
-    if nums[i] == target:
-        result = i
-        break`,
-  },
-
-  two_pointer: {
-    label: "Two Pointer",
-    code: `# Two Sum (Sorted Array)
-nums = [1, 2, 4, 6, 8, 10, 12]
-target = 14
-
-left = 0
-right = len(nums) - 1
-
-while left < right:
-    mid = left + right
-    current_sum = nums[left] + nums[right]
-    if current_sum == target:
-        result = [left, right]
-        break
-    elif current_sum < target:
-        left += 1
-    else:
-        right -= 1`,
-  },
-
-  trapping_rain_water: {
-    label: "Trapping Rain Water",
-    code: `# Trapping Rain Water (Two Pointer)
-height = [0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]
-
-left = 0
-right = len(height) - 1
-left_max = 0
-right_max = 0
-water = 0
-
-while left < right:
-    if height[left] < height[right]:
-        if height[left] >= left_max:
-            left_max = height[left]
-        else:
-            water += left_max - height[left]
-        left += 1
-    else:
-        if height[right] >= right_max:
-            right_max = height[right]
-        else:
-            water += right_max - height[right]
-        right -= 1`,
-  },
-
-  median_sorted_arrays: {
-    label: "Median Sorted Arrays",
-    code: `# Median of Two Sorted Arrays
-nums1 = [1, 3, 8, 9, 15]
-nums2 = [7, 11, 18, 19, 21, 25]
-
-# Binary search on the smaller array
-low = 0
-high = len(nums1)
-n1 = len(nums1)
-n2 = len(nums2)
-
-while low <= high:
-    cut1 = (low + high) // 2
-    cut2 = (n1 + n2 + 1) // 2 - cut1
-
-    left1 = nums1[cut1 - 1] if cut1 > 0 else -999999
-    right1 = nums1[cut1] if cut1 < n1 else 999999
-    left2 = nums2[cut2 - 1] if cut2 > 0 else -999999
-    right2 = nums2[cut2] if cut2 < n2 else 999999
-
-    if left1 <= right2 and left2 <= right1:
-        if (n1 + n2) % 2 == 0:
-            result = (max(left1, left2) + min(right1, right2)) / 2
-        else:
-            result = max(left1, left2)
-        break
-    elif left1 > right2:
-        high = cut1 - 1
-    else:
-        low = cut1 + 1`,
-  },
+                {/* Mini Animation Area */}
+                <div className="mt-10 h-40 neu-pressed rounded-3xl overflow-hidden relative flex items-center justify-center p-6">
+                    {children(controls)}
+                </div>
+            </div>
+        </motion.div>
+    );
 };
 
-const DEFAULT_EXAMPLE = "binary_search";
+// Mini Animations mapped to Neumorphic Colors
+const QuicksortMini = ({ controls }: any) => (
+    <div className="flex gap-3 items-end h-full w-full justify-center pb-2">
+        {[40, 70, 30, 90, 50].map((h, i) => (
+            <motion.div
+                key={i}
+                className="w-6 neu-raised rounded-full"
+                initial={{ height: h }}
+                variants={{
+                    hover: {
+                        height: [h, Math.random() * 80 + 20, Math.random() * 80 + 20, h],
+                        transition: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
+                    }
+                }}
+                animate={controls}
+            />
+        ))}
+    </div>
+);
 
-export default function Home() {
-  const [selectedExample, setSelectedExample] = useState(DEFAULT_EXAMPLE);
-  const [code, setCode] = useState(EXAMPLES[DEFAULT_EXAMPLE].code);
-  const [language] = useState("python");
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [bottomPanelCollapsed, setBottomPanelCollapsed] = useState(false);
-  const setTrace = useTraceStore((state) => state.setTrace);
-  const trace = useTraceStore((s) => s.trace);
-  const currentStep = useTraceStore((s) => {
-    const { trace: t, currentStepIndex } = s;
-    return t.length > 0 ? t[currentStepIndex] : null;
-  });
-  const prevStep = useTraceStore((s) => {
-    const { trace: t, currentStepIndex } = s;
-    return currentStepIndex > 0 ? t[currentStepIndex - 1] : null;
-  });
-  const vizCtx = useMemo(() => detectVizType(trace), [trace]);
-
-  const handleExecute = async () => {
-    setIsExecuting(true);
-    setTrace([]); // Clear old trace immediately to prevent stale vizCtx
-    try {
-      const response = await fetch("/api/execute", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, language }),
-      });
-
-      const data = await response.json();
-      if (data.error) {
-        alert("Execution Error: " + data.error);
-      } else {
-        setTrace(data.trace);
-        // Auto-start animation after execution
-        if (data.trace.length > 0) {
-          setTimeout(() => {
-            useTraceStore.getState().togglePlay();
-          }, 100);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Failed to connect to execution engine");
-    } finally {
-      setIsExecuting(false);
-    }
-  };
-
-  const handleExampleChange = (key: string) => {
-    setSelectedExample(key);
-    setCode(EXAMPLES[key].code);
-    useTraceStore.getState().reset();
-    useTraceStore.getState().setTrace([]);
-  };
-
-  return (
-    <main className="flex flex-col h-screen bg-cream-50 text-cream-950 overflow-hidden">
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-3 border-b border-cream-200 matte-glass z-10 relative">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-[10px] bg-cream-800 shadow-[0_2px_10px_rgba(0,0,0,0.1)] flex items-center justify-center font-bold text-cream-50 text-sm">DR</div>
-          <h1 className="text-lg font-bold tracking-tight text-cream-900">
-            Dry Runner <span className="text-cream-500 font-normal ml-1">3D DSA Visualizer</span>
-          </h1>
+const TreeMini = ({ controls }: any) => (
+    <div className="flex flex-col items-center gap-6 mt-2">
+        <div className="w-8 h-8 rounded-full neu-raised flex items-center justify-center z-10">
+            <div className="w-3 h-3 rounded-full bg-[var(--text-main)] opacity-20" />
         </div>
-        <div className="flex items-center gap-3">
-          {/* Examples dropdown */}
-          <select
-            value={selectedExample}
-            onChange={(e) => handleExampleChange(e.target.value)}
-            className="bg-cream-100/50 border border-cream-300 text-cream-800 text-xs px-3 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cream-500 cursor-pointer appearance-none shadow-sm backdrop-blur-sm transition-all hover:bg-cream-100"
-            style={{ minWidth: 160 }}
-          >
-            <optgroup label="Search">
-              <option value="binary_search">Binary Search</option>
-              <option value="linear_search">Linear Search</option>
-              <option value="two_pointer">Two Pointer</option>
-              <option value="trapping_rain_water">Trapping Rain Water</option>
-              <option value="median_sorted_arrays">Median Sorted Arrays</option>
-            </optgroup>
-            <optgroup label="Sorting">
-              <option value="bubble_sort">Bubble Sort</option>
-              <option value="selection_sort">Selection Sort</option>
-              <option value="insertion_sort">Insertion Sort</option>
-            </optgroup>
-            <optgroup label="Graph Traversal">
-              <option value="bfs">BFS (Graph)</option>
-              <option value="dfs">DFS (Graph)</option>
-              <option value="dijkstra">Dijkstra</option>
-            </optgroup>
-            <optgroup label="Backtracking">
-              <option value="nqueens">N-Queens</option>
-            </optgroup>
-          </select>
-          <span className="px-2 py-1 rounded-md bg-cream-100/80 border border-cream-200 text-[10px] font-bold uppercase tracking-widest text-cream-600 shadow-sm">{language}</span>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="flex-1 flex min-h-0">
-        {/* Left Side: Editor + Controls */}
-        {!isFullscreen && (
-          <div className="w-[450px] flex flex-col border-r border-cream-200 bg-cream-50/50 z-10 relative shadow-[4px_0_24px_rgba(0,0,0,0.02)] matte-glass-darker">
-            <Toolbar onExecute={handleExecute} isExecuting={isExecuting} />
-            <div className="flex-1 min-h-0">
-              <CodeEditor code={code} language={language} onChange={(val) => setCode(val || "")} />
+        <div className="flex gap-12">
+            <div className="relative">
+                <div className="absolute -top-7 left-1/2 w-1 h-8 neu-pressed origin-bottom transform -rotate-45" />
+                <motion.div
+                    className="w-8 h-8 rounded-full neu-raised z-10 relative flex items-center justify-center"
+                    variants={{ hover: { y: [0, -8, 0], scale: [1, 1.1, 1] } }}
+                    animate={controls}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                >
+                    <div className="w-3 h-3 rounded-full bg-[var(--accent-cyan)]" />
+                </motion.div>
             </div>
-          </div>
-        )}
+            <div className="relative">
+                <div className="absolute -top-7 right-1/2 w-1 h-8 neu-pressed origin-bottom transform rotate-45" />
+                <motion.div
+                    className="w-8 h-8 rounded-full neu-raised z-10 relative flex items-center justify-center"
+                    variants={{ hover: { y: [0, -8, 0], scale: [1, 1.1, 1] } }}
+                    animate={controls}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
+                >
+                    <div className="w-3 h-3 rounded-full bg-blue-400" />
+                </motion.div>
+            </div>
+        </div>
+    </div>
+);
 
-        {/* Right Side: Visualization */}
-        <div className="flex-1 relative flex flex-col bg-cream-100/30">
-          {/* 2D/3D Toggle */}
-          <div className="flex items-center gap-2 px-4 py-2 border-b border-cream-200 matte-glass z-10 relative">
-            <button
-              onClick={() => setViewMode("2d")}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-all shadow-sm ${viewMode === "2d"
-                ? "bg-cream-800 text-cream-50"
-                : "bg-cream-100 text-cream-600 hover:bg-cream-200"
-                }`}
+// ─────────────────────────────────────────────────────────────────
+// Hero 3D Graphic (CSS/Framer representation of a Neumorphic data structure)
+// ─────────────────────────────────────────────────────────────────
+const NeumorphicHeroArt = () => {
+    return (
+        <div className="relative w-full h-full flex items-center justify-center perspective-[1000px]">
+            <motion.div
+                className="relative w-72 h-72 neu-raised rounded-[3rem] flex items-center justify-center transform-style-preserve-3d"
+                animate={{
+                    rotateY: [0, 10, -10, 0],
+                    rotateX: [0, 5, -5, 0]
+                }}
+                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
             >
-              2D View
-            </button>
-            <button
-              onClick={() => setViewMode("3d")}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-all shadow-sm ${viewMode === "3d"
-                ? "bg-cream-800 text-cream-50"
-                : "bg-cream-100 text-cream-600 hover:bg-cream-200"
-                }`}
-            >
-              3D View
-            </button>
-            <span className="ml-2 text-xs text-cream-300">|</span>
-            <span className="text-xs text-cream-500 font-medium">
-              {vizCtx.type !== "none" ? `Detected: ${vizCtx.type}` : "Waiting for code..."}
-              {vizCtx.primaryVar ? ` • primary: ${vizCtx.primaryVar}` : ""}
-            </span>
-            <div className="flex-1" />
-            {/* Fullscreen toggle */}
-            <button
-              onClick={() => setIsFullscreen(f => !f)}
-              className="px-2 py-1 text-xs font-medium rounded-md transition-all shadow-sm bg-cream-100 text-cream-600 hover:bg-cream-200"
-              title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-            >
-              {isFullscreen ? "⊟ Exit" : "⊞ Fullscreen"}
-            </button>
-          </div>
-
-          {/* Visualization Area */}
-          <div className="flex-1 min-h-0">
-            {viewMode === "3d" ? (
-              <Scene />
-            ) : (
-              currentStep ? (
-                <Visualization2D step={currentStep} prevStep={prevStep} vizCtx={vizCtx} isFullscreen={isFullscreen} />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-cream-400 text-sm font-medium">
-                  Run your code to see the visualization
+                {/* Inner Pressed Canvas */}
+                <div className="w-48 h-48 neu-pressed rounded-full flex items-center justify-center relative">
+                    <motion.div
+                        className="w-24 h-24 neu-raised rounded-[2rem] absolute"
+                        animate={{ rotateZ: 360 }}
+                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                    />
+                    <div className="w-12 h-12 rounded-full neu-pressed bg-[var(--accent-cyan)]/10 z-10 shadow-[inset_0_0_10px_var(--accent-cyan)] flex items-center justify-center">
+                        <Code2 size={20} className="text-[var(--accent-cyan)]" />
+                    </div>
                 </div>
-              )
-            )}
-          </div>
-          {/* Iteration slider — under visualization for easy access */}
-          <StepSlider />
-        </div>
-      </div>
+            </motion.div>
 
-      {/* Bottom Panel — Collapsible */}
-      {!isFullscreen && (
-        <div className={`border-t border-cream-200 flex overflow-hidden matte-glass z-20 relative transition-all duration-300 ${bottomPanelCollapsed ? 'h-8' : 'h-48'}`}>
-          {/* Collapse toggle */}
-          <button
-            onClick={() => setBottomPanelCollapsed(c => !c)}
-            className="absolute top-0 left-1/2 -translate-x-1/2 z-30 px-3 py-0.5 text-[10px] font-medium rounded-b-md bg-cream-200/80 text-cream-600 hover:bg-cream-300 transition-all backdrop-blur-sm"
-          >
-            {bottomPanelCollapsed ? '▼ Show Panels' : '▲ Hide Panels'}
-          </button>
-          {!bottomPanelCollapsed && (
-            <>
-              <VariablePanel />
-              <StdoutPanel />
-            </>
-          )}
+            {/* Floating side blocks */}
+            <motion.div
+                className="absolute top-1/4 right-10 w-20 h-20 neu-raised rounded-2xl"
+                animate={{ y: [-15, 15], rotateZ: [-5, 5] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", repeatType: "reverse" }}
+            />
+            <motion.div
+                className="absolute bottom-1/4 left-10 w-16 h-16 neu-raised rounded-full"
+                animate={{ y: [15, -15], scale: [0.9, 1.1] }}
+                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", repeatType: "reverse", delay: 1 }}
+            />
         </div>
-      )}
-    </main>
-  );
+    )
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// Main Landing Page Component
+// ─────────────────────────────────────────────────────────────────
+export default function LandingPage() {
+    return (
+        <div className="min-h-screen relative font-sans selection:bg-[var(--accent-cyan)]/30 overflow-hidden">
+
+            {/* Navigation */}
+            <nav className="fixed top-0 w-full z-50 py-6 px-10 flex justify-between items-center bg-[var(--bg-neu)]/80 backdrop-blur-xl border-b border-white/20">
+                <div className="flex items-center gap-4 cursor-pointer">
+                    <Image src="/logo.png" alt="DryRunner Logo" width={48} height={48} className="rounded-2xl shadow-lg border-2 border-white/40" />
+                    <span className="text-2xl font-bold tracking-tight text-[var(--text-main)]">Dry Runner</span>
+                </div>
+                <div className="flex gap-8 items-center">
+                    <a href="#features" className="text-base font-semibold text-slate-500 hover:text-[var(--text-main)] transition-colors">Platform</a>
+                    <a href="#how" className="text-base font-semibold text-slate-500 hover:text-[var(--text-main)] transition-colors">Execution</a>
+                    <Link href="/visualizer" className="group flex items-center gap-2 neu-raised px-8 py-3 rounded-full text-base font-bold text-[var(--accent-cyan)] hover:scale-105 active:scale-95 transition-all">
+                        Launch App
+                        <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                </div>
+            </nav>
+
+            {/* Hero Section */}
+            <section className="relative pt-48 pb-32 px-10 min-h-screen flex items-center z-10 max-w-7xl mx-auto">
+                <div className="w-full grid lg:grid-cols-2 gap-20 items-center">
+
+                    {/* Text Content */}
+                    <div className="flex flex-col gap-10">
+                        <motion.div
+                            initial={{ opacity: 0, y: 40 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                        >
+                            <div className="inline-flex items-center gap-3 neu-pressed px-5 py-2 rounded-full text-[var(--accent-cyan)] text-sm font-bold uppercase tracking-widest mb-8">
+                                <span className="relative flex h-3 w-3">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent-cyan)] opacity-60"></span>
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-[var(--accent-cyan)]"></span>
+                                </span>
+                                Neu-Engine v3.0 Live
+                            </div>
+                            <h1 className="text-7xl sm:text-[5.5rem] font-extrabold text-[var(--text-main)] tracking-tighter leading-[1.05]">
+                                Tactile Logic. <br />
+                                <span className="opacity-40">Absolute Clarity.</span>
+                            </h1>
+                        </motion.div>
+
+                        <motion.p
+                            className="text-2xl text-slate-500 font-medium leading-relaxed max-w-xl"
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+                        >
+                            Experience data structures physically. Write Python or JavaScript and watch your memory footprint carved perfectly into a premium 3D dashboard.
+                        </motion.p>
+
+                        <motion.div
+                            className="flex items-center gap-6 pt-4"
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                        >
+                            <Link href="/visualizer" className="group flex items-center justify-center gap-3 neu-raised px-10 py-5 rounded-full text-xl font-bold text-[var(--accent-cyan)] hover:scale-[1.02] active:scale-[0.98] transition-all">
+                                <Play size={24} className="fill-[var(--accent-cyan)]" />
+                                Start Visualizing
+                            </Link>
+                        </motion.div>
+                    </div>
+
+                    {/* Highly stylized Neumorphic Graphic representing a 3D Canvas */}
+                    <motion.div
+                        className="relative h-[600px] w-full rounded-[4rem] neu-pressed overflow-hidden flex items-center justify-center"
+                        initial={{ opacity: 0, scale: 0.9, rotateY: 15 }}
+                        animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+                        transition={{ duration: 1.2, delay: 0.2, type: "spring", bounce: 0.4 }}
+                    >
+                        <NeumorphicHeroArt />
+                    </motion.div>
+                </div>
+            </section>
+
+            {/* Features Section */}
+            <section id="features" className="py-40 px-10 relative z-10 w-full">
+                <div className="max-w-7xl mx-auto">
+                    <motion.div
+                        className="text-center mb-32 max-w-4xl mx-auto"
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-100px" }}
+                        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                    >
+                        <h2 className="text-5xl md:text-[4rem] font-bold text-[var(--text-main)] tracking-tight mb-8">Hardware-grade UX</h2>
+                        <p className="text-2xl text-slate-500 font-medium">Interact with your algorithms through beautifully machined, pressure-sensitive interfaces.</p>
+                    </motion.div>
+
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
+                        <FeatureCard
+                            title="Interpreter Engine"
+                            desc="Drop in any code. The backend interpreter traces line-by-line execution, mapping variables to physical space."
+                            icon={Code2}
+                            delay={0}
+                        >
+                            {(controls: any) => <QuicksortMini controls={controls} />}
+                        </FeatureCard>
+
+                        <FeatureCard
+                            title="Tactile 3D Canvas"
+                            desc="Fluid, butter-smooth panning and zooming leveraging raw WebGL and Three.js physics."
+                            icon={Layers}
+                            delay={0.1}
+                        >
+                            {(controls: any) => (
+                                <motion.div
+                                    className="w-24 h-24 neu-raised rounded-3xl"
+                                    variants={{ hover: { rotateX: [0, 20, -20, 0], rotateY: [0, 20, -20, 0] } }}
+                                    animate={controls}
+                                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                                />
+                            )}
+                        </FeatureCard>
+
+                        <FeatureCard
+                            title="Time Travel Scrubbing"
+                            desc="Step backwards and forwards through algorithms like a physical video editor hardware board."
+                            icon={Zap}
+                            delay={0.2}
+                        >
+                            {(controls: any) => <TreeMini controls={controls} />}
+                        </FeatureCard>
+                    </div>
+                </div>
+            </section>
+
+            {/* CTA Section */}
+            <section className="py-40 px-10 relative z-10 flex justify-center">
+                <motion.div
+                    className="w-full max-w-5xl text-center neu-raised p-24 rounded-[4rem]"
+                    initial={{ opacity: 0, scale: 0.95, y: 40 }}
+                    whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-100px" }}
+                    transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+                >
+                    <div className="w-24 h-24 mx-auto mb-10 neu-pressed rounded-full flex items-center justify-center">
+                        <Bot size={40} className="text-[var(--text-main)] opacity-50" />
+                    </div>
+                    <h2 className="text-6xl font-extrabold text-[var(--text-main)] tracking-tight mb-8">Feel the code.</h2>
+                    <p className="text-2xl text-slate-500 font-medium mb-16 max-w-2xl mx-auto">Stop reading flat stack traces. Start interacting with immersive, physically-rendered object memory.</p>
+
+                    <Link href="/visualizer" className="inline-flex items-center justify-center gap-4 neu-raised px-14 py-6 rounded-full text-2xl font-bold text-[var(--text-main)] hover:text-[var(--accent-cyan)] hover:scale-105 active:scale-95 transition-all">
+                        Launch Visualizer <ArrowRight size={28} />
+                    </Link>
+                </motion.div>
+            </section>
+
+            {/* Footer */}
+            <footer className="py-12 text-center pb-20">
+                <p className="text-slate-400 font-semibold text-lg">Designed & Machined with Next.js • Tailwind CSS • Three.js</p>
+            </footer>
+        </div>
+    );
 }

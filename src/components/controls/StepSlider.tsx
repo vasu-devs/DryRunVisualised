@@ -87,20 +87,20 @@ export function StepSlider() {
     if (trace.length === 0) return null;
 
     return (
-        <div className="px-4 py-2 bg-cream-100/50 matte-glass border-t border-cream-200 flex items-center gap-3 z-10 relative">
+        <div className="px-4 py-3 neu-pressed flex items-center gap-3 z-10 relative m-1">
             {/* Play/Pause button — integrated into slider bar */}
             <button
                 onClick={togglePlay}
-                className={`p-1.5 rounded-md transition-colors shadow-sm ${isPlaying
-                    ? "bg-cream-300/50 text-cream-800 hover:bg-cream-300"
-                    : "bg-cream-800 text-cream-50 hover:bg-cream-900"
+                className={`p-2 rounded-full transition-all neu-raised ${isPlaying
+                    ? "text-[var(--accent-cyan)] shadow-[inset_4px_4px_10px_var(--shadow-dark),inset_-4px_-4px_10px_var(--shadow-light)]"
+                    : "text-slate-600"
                     }`}
                 title={isPlaying ? "Pause" : "Play"}
             >
                 {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
             </button>
 
-            <span className="text-xs font-mono text-cream-600 whitespace-nowrap min-w-[80px] font-medium">
+            <span className="text-sm font-mono text-slate-600 whitespace-nowrap min-w-[90px] font-medium tracking-wide">
                 Step {currentStepIndex + 1} / {trace.length}
             </span>
             <input
@@ -109,7 +109,7 @@ export function StepSlider() {
                 max={trace.length - 1}
                 value={currentStepIndex}
                 onChange={(e) => setStep(parseInt(e.target.value))}
-                className="w-full h-1.5 bg-cream-300 rounded-lg appearance-none cursor-pointer accent-cream-800"
+                className="w-full h-2 neu-slider-track appearance-none cursor-pointer"
             />
             {/* Speed selector */}
             <div className="flex items-center gap-1">
@@ -117,9 +117,9 @@ export function StepSlider() {
                     <button
                         key={opt.value}
                         onClick={() => setPlaySpeed(opt.value)}
-                        className={`px-1.5 py-0.5 text-[10px] font-mono rounded transition-colors ${playSpeed === opt.value
-                            ? "bg-cream-800 text-cream-50 shadow-sm"
-                            : "text-cream-500 hover:text-cream-800 hover:bg-cream-200"
+                        className={`px-2 py-1 text-[11px] font-mono transition-all ${playSpeed === opt.value
+                            ? "neu-pressed text-[var(--accent-cyan)] font-bold"
+                            : "neu-raised text-slate-500"
                             }`}
                     >
                         {opt.label}

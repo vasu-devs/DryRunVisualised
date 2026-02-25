@@ -37,6 +37,12 @@ const AUX_NAMES = new Set([
  */
 function isAdjacencyList(val: unknown): boolean {
     if (typeof val !== "object" || val === null || Array.isArray(val)) return false;
+
+    // Check if it's our new rich structured graph format
+    if ((val as any).__type__ === "structured_graph" && (val as any).adjList) {
+        return true;
+    }
+
     const entries = Object.entries(val as Record<string, unknown>);
     if (entries.length < 2) return false;
     let arrayCount = 0;

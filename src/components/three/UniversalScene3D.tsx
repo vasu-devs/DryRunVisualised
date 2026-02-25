@@ -6,7 +6,8 @@ import { Text, RoundedBox, Line, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { TraceStep } from "@/lib/interpreter/schema";
 import { VizContext } from "@/lib/vizDetector";
-import { useGraphLayout } from "@/hooks/useGraphLayout";
+import { useGraphLayout, useHierarchicalGraphLayout, type StructuredGraphData } from "@/hooks/useGraphLayout";
+import { SceneErrorBoundary } from "./SceneErrorBoundary";
 
 // ─── Configuration ───────────────────────────────────────────
 const BAR_SPACING = 1.4;
@@ -173,6 +174,7 @@ function classifyValue(val: unknown): "array" | "dict" | "scalar" | "none" {
 
 function isAdjList(val: unknown): boolean {
     if (typeof val !== "object" || val === null || Array.isArray(val)) return false;
+    if ((val as any).__type__ === "structured_graph") return true;
     const entries = Object.entries(val as Record<string, unknown>);
     return entries.length >= 2 && entries.every(([, v]) => Array.isArray(v));
 }
@@ -248,15 +250,16 @@ function Bar3D({
 
     const targetColor = useMemo(() => {
         if (isChanged) return new THREE.Color("#22c55e");
-        if (isPointed) return new THREE.Color("#f59e0b");
-        if (hovered) return new THREE.Color("#e2e8f0"); // Highlight on hover
-        return new THREE.Color(color);
+        if (isPointed) return new THREE.Color("#00c6a7"); // Cyan accent
+        if (hovered) return new THREE.Color("#ffffff"); // Highlight on hover
+        if (color === "rgba(24, 24, 27, 0.5)") return new THREE.Color("#e6e8ec"); // Override old dark default
+        return new THREE.Color("#e6e8ec"); // Force Neumorphic base
     }, [isChanged, isPointed, hovered, color]);
 
     const targetEmissive = useMemo(() => {
         if (isChanged) return new THREE.Color("#16a34a");
-        if (isPointed) return new THREE.Color("#d97706");
-        if (hovered) return new THREE.Color("#cbd5e1");
+        if (isPointed) return new THREE.Color("#00a388"); // Darker cyan
+        if (hovered) return new THREE.Color("#f8f9fa");
         return new THREE.Color("#ffffff");
     }, [isChanged, isPointed, hovered]);
 
@@ -309,16 +312,17 @@ function Bar3D({
             <RoundedBox
                 ref={meshRef}
                 args={[1.0, barHeight, BAR_DEPTH]}
-                radius={0.06}
-                smoothness={4}
+                radius={0.25} // Increased for squircle look
+                smoothness={8} // High poly count for smooth curves
                 position={[0, barHeight / 2, 0]}
                 castShadow
+                receiveShadow
             >
                 <meshStandardMaterial
                     ref={matRef}
-                    color={color}
+                    color="#e6e8ec"
                     emissive="#ffffff"
-                    emissiveIntensity={0.6}
+                    emissiveIntensity={0.8}
                     roughness={0.2}
                     metalness={0.1}
                     transparent
@@ -329,8 +333,8 @@ function Bar3D({
             {/* Glassmorphic Tooltip on Hover */}
             {hovered && (
                 <Html position={[0, barHeight + 0.8, 0]} center zIndexRange={[100, 0]}>
-                    <div className="bg-cream-100/80 backdrop-blur-md border border-cream-200/50 shadow-lg px-3 py-2 rounded-xl text-xs font-mono text-cream-900 pointer-events-none whitespace-nowrap flex flex-col items-center animate-fade-in-up">
-                        <span className="text-[10px] text-cream-500 font-sans uppercase tracking-wider mb-0.5">Index {index}</span>
+                    <div className="neu-raised px-3 py-2 text-xs font-mono text-[var(--text-main)] pointer-events-none whitespace-nowrap flex flex-col items-center animate-fade-in-up">
+                        <span className="text-[10px] opacity-60 font-sans uppercase tracking-wider mb-0.5">Index {index}</span>
                         <span className="font-bold text-sm">{displayText}</span>
                     </div>
                 </Html>
@@ -340,11 +344,11 @@ function Bar3D({
             <Text
                 position={[0, barHeight + 0.35, 0]}
                 fontSize={0.3}
-                color="#302a1e"
+                color="#334155" // Slate 700
                 anchorX="center"
                 anchorY="middle"
                 outlineWidth={0.015}
-                outlineColor="#fcfbf9"
+                outlineColor="#ffffff"
             >
                 {displayText}
             </Text>
@@ -352,7 +356,7 @@ function Bar3D({
             <Text
                 position={[0, -0.25, 0]}
                 fontSize={0.18}
-                color="#a8967f"
+                color="#94a3b8" // Slate 400
                 anchorX="center"
                 anchorY="top"
             >
@@ -440,11 +444,11 @@ function ScalarBadge3D({
     const text = `${name} = ${formatCellValue(value)}`;
     return (
         <group position={[xPos, yPos, 0]}>
-            <RoundedBox args={[text.length * 0.2 + 0.4, 0.45, 0.15]} radius={0.06} smoothness={3}>
+            <RoundedBox args={[text.length * 0.2 + 0.4, 0.45, 0.15]} radius={0.15} smoothness={6} castShadow receiveShadow>
                 <meshStandardMaterial
-                    color={isChanged ? "#dcfce7" : "#ffffff"}
-                    emissive={isChanged ? "#22c55e" : "#f5f2eb"}
-                    emissiveIntensity={isChanged ? 0.6 : 0.5}
+                    color={isChanged ? "#22c55e" : "#cbd5e1"}
+                    emissive={isChanged ? "#16a34a" : "#94a3b8"}
+                    emissiveIntensity={isChanged ? 1.0 : 0.8}
                     roughness={0.2}
                     metalness={0.1}
                     transparent
@@ -495,12 +499,12 @@ function GridTile3D({
 
     const targetColor = useMemo(() => {
         if (isChanged) return new THREE.Color("#22c55e");
-        if (isPointed) return new THREE.Color("#f59e0b");
-        if (hovered) return new THREE.Color("#f1f5f9");
+        if (isPointed) return new THREE.Color("#00c6a7"); // Cyan
+        if (hovered) return new THREE.Color("#ffffff");
         const numVal = typeof value === "number" ? value : 0;
-        if (numVal === 0) return new THREE.Color("#ffffff");
-        if (numVal === 1 || value === true) return new THREE.Color("#dbeafe");
-        return new THREE.Color("#e0e7ff");
+        if (numVal === 0) return new THREE.Color("#e6e8ec"); // Neumorphic base
+        if (numVal === 1 || value === true) return new THREE.Color("#dbeafe"); // Keep blueish
+        return new THREE.Color("#f1f5f9"); // Lighter hue
     }, [isChanged, isPointed, hovered, value]);
 
     useFrame((_, delta) => {
@@ -526,12 +530,12 @@ function GridTile3D({
             onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
             onPointerOut={(e) => { e.stopPropagation(); setHovered(false); document.body.style.cursor = 'auto'; }}
         >
-            <RoundedBox args={[GRID_TILE, GRID_TILE, tileHeight]} radius={0.04} smoothness={3}>
+            <RoundedBox args={[GRID_TILE, GRID_TILE, tileHeight]} radius={0.2} smoothness={6} castShadow receiveShadow>
                 <meshStandardMaterial
                     ref={matRef}
-                    color="#ffffff"
-                    emissive="#f5f2eb"
-                    emissiveIntensity={0.5}
+                    color="#e6e8ec"
+                    emissive="#ffffff"
+                    emissiveIntensity={0.8}
                     roughness={0.2}
                     metalness={0.1}
                     transparent
@@ -541,10 +545,10 @@ function GridTile3D({
             <Text
                 position={[0, 0, tileHeight / 2 + 0.05]}
                 fontSize={0.22}
-                color="#302a1e"
+                color="#334155"
                 anchorX="center"
                 anchorY="middle"
-                outlineColor="#fcfbf9"
+                outlineColor="#ffffff"
             >
                 {displayText}
             </Text>
@@ -552,8 +556,8 @@ function GridTile3D({
             {/* Glassmorphic Tooltip on Hover */}
             {hovered && (
                 <Html position={[0, 0, tileHeight + 0.5]} center zIndexRange={[100, 0]}>
-                    <div className="bg-cream-100/80 backdrop-blur-md border border-cream-200/50 shadow-lg px-3 py-2 rounded-xl text-xs font-mono text-cream-900 pointer-events-none whitespace-nowrap flex flex-col items-center animate-fade-in-up">
-                        <span className="text-[10px] text-cream-500 font-sans uppercase tracking-wider mb-0.5">Cell ({row}, {col})</span>
+                    <div className="neu-raised px-3 py-2 text-xs font-mono text-[var(--text-main)] pointer-events-none whitespace-nowrap flex flex-col items-center animate-fade-in-up">
+                        <span className="text-[10px] opacity-60 font-sans uppercase tracking-wider mb-0.5">Cell ({row}, {col})</span>
                         <span className="font-bold text-sm">{displayText}</span>
                     </div>
                 </Html>
@@ -601,13 +605,15 @@ function DictView3D({
                     <group key={key} position={[x, 0, z]}>
                         <RoundedBox
                             args={[1.4, 0.4, 0.6]}
-                            radius={0.06}
-                            smoothness={3}
+                            radius={0.15}
+                            smoothness={6}
+                            castShadow
+                            receiveShadow
                         >
                             <meshStandardMaterial
-                                color="#ffffff"
-                                emissive="#f5f2eb"
-                                emissiveIntensity={0.5}
+                                color="#e6e8ec"
+                                emissive="#ffffff"
+                                emissiveIntensity={0.8}
                                 roughness={0.2}
                                 metalness={0.1}
                                 transparent
@@ -617,7 +623,7 @@ function DictView3D({
                         <Text
                             position={[0, 0, 0.32]}
                             fontSize={0.16}
-                            color="#302a1e"
+                            color="#334155"
                             anchorX="center"
                             anchorY="middle"
                             maxWidth={1.3}
@@ -724,27 +730,28 @@ function Stack3D({
                     <group key={idx} position={[0, y, 0]}>
                         <RoundedBox
                             args={[CELL_W, CELL_H, BAR_DEPTH]}
-                            radius={0.06}
-                            smoothness={4}
+                            radius={0.2}
+                            smoothness={6}
                             position={[0, CELL_H / 2, 0]}
                             castShadow
+                            receiveShadow
                         >
                             <meshStandardMaterial
-                                color={isNew ? "#059669" : isTop ? "#0d9488" : "#115e59"}
-                                emissive={isNew ? "#10b981" : isTop ? "#14b8a6" : "#134e4a"}
-                                emissiveIntensity={isNew ? 0.8 : isTop ? 0.5 : 0.2}
+                                color={isNew ? "#22c55e" : isTop ? "#e6e8ec" : "#f1f5f9"}
+                                emissive={isNew ? "#16a34a" : isTop ? "#ffffff" : "#f8f9fa"}
+                                emissiveIntensity={isNew ? 0.8 : isTop ? 0.8 : 0.6}
                                 roughness={0.2}
-                                metalness={0.8}
+                                metalness={0.1}
                             />
                         </RoundedBox>
                         <Text
                             position={[0, CELL_H / 2, BAR_DEPTH / 2 + 0.02]}
                             fontSize={0.24}
-                            color="#302a1e"
+                            color="#334155"
                             anchorX="center"
                             anchorY="middle"
                             outlineWidth={0.01}
-                            outlineColor="#fcfbf9"
+                            outlineColor="#ffffff"
                         >
                             {displayText}
                         </Text>
@@ -902,17 +909,16 @@ function Queue3D({
                     <group key={idx} position={[x, 0, 0]}>
                         <RoundedBox
                             args={[CELL_W, CELL_H, BAR_DEPTH]}
-                            radius={0.06}
-                            smoothness={4}
+                            radius={0.2}
+                            smoothness={6}
                             position={[0, CELL_H / 2, 0]}
                             castShadow
+                            receiveShadow
                         >
                             <meshStandardMaterial
-                                color={isNew ? "#ea580c" : isFront ? "#c2410c" : isBack ? "#f97316" : "#9a3412"}
-                                emissive={isNew ? "#f97316" : isFront ? "#ea580c" : "#7c2d12"}
-                                emissiveIntensity={isNew ? 0.8 : isFront ? 0.5 : 0.25}
+                                color={isNew ? "#22c55e" : isFront ? "#d4d4d4" : "#e2e2e2"}
                                 roughness={0.2}
-                                metalness={0.8}
+                                metalness={0.1}
                             />
                         </RoundedBox>
                         <Text
@@ -1024,17 +1030,16 @@ function LinkedListView3D({
                         {/* Node box */}
                         <RoundedBox
                             args={[NODE_W, NODE_H, BAR_D]}
-                            radius={0.08}
-                            smoothness={4}
+                            radius={0.2}
+                            smoothness={6}
                             position={[0, NODE_H / 2, 0]}
                             castShadow
+                            receiveShadow
                         >
                             <meshStandardMaterial
-                                color={isHead ? "#16a34a" : isTail ? "#15803d" : "#166534"}
-                                emissive={isHead ? "#22c55e" : "#15803d"}
-                                emissiveIntensity={isHead ? 0.6 : 0.25}
+                                color={isHead ? "#22c55e" : isTail ? "#d4d4d4" : "#e2e2e2"}
                                 roughness={0.2}
-                                metalness={0.8}
+                                metalness={0.1}
                             />
                         </RoundedBox>
 
@@ -1289,18 +1294,14 @@ function GraphView3D({
                             onPointerOver={(e) => { e.stopPropagation(); setHoveredNode(id); document.body.style.cursor = 'pointer'; }}
                             onPointerOut={(e) => { e.stopPropagation(); setHoveredNode(null); document.body.style.cursor = 'auto'; }}
                         >
-                            <mesh castShadow>
+                            <mesh castShadow receiveShadow>
                                 <sphereGeometry args={[0.4, 24, 24]} />
                                 <meshPhysicalMaterial
                                     color={nodeColor}
-                                    emissive={emissive}
-                                    emissiveIntensity={0.6}
                                     roughness={0.15}
-                                    transmission={0.8}
+                                    transmission={0.0}
                                     thickness={0.5}
-                                    ior={1.4}
-                                    clearcoat={0.8}
-                                    clearcoatRoughness={0.1}
+                                    clearcoat={0.2}
                                 />
                             </mesh>
                             <Text
@@ -1326,6 +1327,422 @@ function GraphView3D({
                             )}
                         </group>
                     </DraggableGroup>
+                );
+            })}
+        </group>
+    );
+}
+
+/** Structured Hierarchical Graph Visualization (e.g. Tries) */
+function StructuredGraph3D({
+    graph,
+    visited,
+    queue,
+    current,
+    xOffset,
+    zOffset,
+}: {
+    graph: StructuredGraphData;
+    visited: unknown[];
+    queue: unknown[];
+    current: unknown;
+    xOffset: number;
+    zOffset: number;
+}) {
+    const visitedSet = useMemo(() => {
+        if (Array.isArray(visited)) return new Set(visited.map(String));
+        if (visited && typeof visited === 'object') return new Set(Object.keys(visited).map(String));
+        return new Set<string>();
+    }, [visited]);
+    const queueSet = useMemo(() => {
+        if (Array.isArray(queue)) return new Set(queue.map(String));
+        if (queue && typeof queue === 'object') return new Set(Object.keys(queue).map(String));
+        return new Set<string>();
+    }, [queue]);
+    const currentStr = current !== undefined ? String(current) : null;
+
+    const { layout, edges, nodes: nodeIds } = useHierarchicalGraphLayout(graph, 3, 3.5);
+
+    const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+    const [dragOffsets, setDragOffsets] = useState<Record<string, { x: number; y: number }>>({});
+
+    // ── Generate curved edge points ──
+    const getEdgePoints = (fromId: string, toId: string, type?: string) => {
+        const fromBase = layout.get(fromId);
+        const toBase = layout.get(toId);
+        if (!fromBase || !toBase) return null;
+
+        const dFrom = dragOffsets[fromId] || { x: 0, y: 0 };
+        const dTo = dragOffsets[toId] || { x: 0, y: 0 };
+
+        const fromPos = { x: fromBase.x + dFrom.x, y: fromBase.y + dFrom.y };
+        const toPos = { x: toBase.x + dTo.x, y: toBase.y + dTo.y };
+
+        const NODE_RADIUS = 0.45;
+        const dx = toPos.x - fromPos.x;
+        const dy = toPos.y - fromPos.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 0.01) return null;
+
+        const ux = dx / dist;
+        const uy = dy / dist;
+
+        const startX = fromPos.x + ux * NODE_RADIUS;
+        const startY = fromPos.y + uy * NODE_RADIUS;
+        const endX = toPos.x - ux * NODE_RADIUS;
+        const endY = toPos.y - uy * NODE_RADIUS;
+
+        // If it's a structural tree edge, draw an almost straight line with subtle bezier.
+        // If it's a fail edge, draw a wider sweeping curve.
+        const isFail = type === "fail";
+        const midX = (fromPos.x + toPos.x) / 2;
+        const midY = (fromPos.y + toPos.y) / 2;
+
+        const perpX = -uy;
+        const curvature = isFail ? Math.min(dist * 0.4, 3) : Math.min(dist * 0.05, 0.5);
+        const sign = startX < endX ? 1 : -1;
+
+        // For fail links, arch outwards.
+        const ctrlX = midX + (isFail ? curvature * sign : ux * curvature);
+        const ctrlY = midY + (isFail ? curvature : 0);
+
+        const SEGMENTS = isFail ? 20 : 10;
+        const points: [number, number, number][] = [];
+        for (let i = 0; i <= SEGMENTS; i++) {
+            const t = i / SEGMENTS;
+            const oneMinusT = 1 - t;
+            const px = oneMinusT * oneMinusT * startX + 2 * oneMinusT * t * ctrlX + t * t * endX;
+            const py = oneMinusT * oneMinusT * startY + 2 * oneMinusT * t * ctrlY + t * t * endY;
+            points.push([px, py, 0]);
+        }
+
+        // Point exactly halfway along the curve for placing label
+        const tMid = 0.5;
+        const oneMinusTMid = 0.5;
+        const labelX = oneMinusTMid * oneMinusTMid * startX + 2 * oneMinusTMid * tMid * ctrlX + tMid * tMid * endX;
+        const labelY = oneMinusTMid * oneMinusTMid * startY + 2 * oneMinusTMid * tMid * ctrlY + tMid * tMid * endY;
+
+        return { points, labelPos: [labelX, labelY, 0.1] as [number, number, number] };
+    };
+
+    return (
+        <group position={[xOffset, 0, zOffset]}>
+            {/* Edges */}
+            {edges.map(({ from, to, label, type }: { from: string, to: string, label?: string, type?: string }, idx: number) => {
+                const edgeData = getEdgePoints(from, to, type);
+                if (!edgeData) return null;
+                const { points, labelPos } = edgeData;
+
+                const isFail = type === "fail";
+                const isTraversed = visitedSet.has(from) && visitedSet.has(to);
+
+                let edgeColor = isTraversed ? "#22c55e" : "#475569";
+                if (isFail) edgeColor = "#f43f5e"; // Rose color for fail links
+
+                return (
+                    <group key={`edge-${from}-${to}-${idx}`}>
+                        <Line
+                            points={points}
+                            color={edgeColor}
+                            lineWidth={isTraversed ? 2.5 : isFail ? 1.5 : 1.2}
+                            transparent
+                            opacity={isFail ? 0.35 : (isTraversed ? 1.0 : 0.6)}
+                            dashed={isFail}
+                            dashScale={0.1}
+                        />
+                        {/* Edge Label (e.g., character in Trie) */}
+                        {label && !isFail && (
+                            <Text
+                                position={labelPos}
+                                fontSize={0.25}
+                                color="#e2e8f0"
+                                anchorX="center"
+                                anchorY="middle"
+                                outlineWidth={0.03}
+                                outlineColor="#000000"
+                            >
+                                {label}
+                            </Text>
+                        )}
+                    </group>
+                );
+            })}
+
+            {/* Nodes */}
+            {nodeIds.map((id: string) => {
+                const pos = layout.get(id);
+                if (!pos) return null;
+
+                let nodeColor = "#f8fafc";
+                let emissive = "#cbd5e1";
+                const isHovered = hoveredNode === id;
+
+                if (id === currentStr) {
+                    nodeColor = "#ffedd5";
+                    emissive = "#f97316";
+                } else if (visitedSet.has(id)) {
+                    nodeColor = "#dcfce7";
+                    emissive = "#22c55e";
+                } else if (queueSet.has(id)) {
+                    nodeColor = "#dbeafe";
+                    emissive = "#3b82f6";
+                } else if (isHovered) {
+                    nodeColor = "#ffffff";
+                    emissive = "#e2e8f0";
+                }
+
+                const zHover = isHovered ? 0.3 : 0;
+                const scale = isHovered ? 1.15 : 1.0;
+
+                return (
+                    <DraggableGroup
+                        key={id}
+                        initialPosition={[pos.x, pos.y, zHover]}
+                        onDrag={(dx, dy) => setDragOffsets(prev => ({ ...prev, [id]: { x: dx, y: dy } }))}
+                    >
+                        <group
+                            scale={scale}
+                            onPointerOver={(e) => { e.stopPropagation(); setHoveredNode(id); document.body.style.cursor = 'pointer'; }}
+                            onPointerOut={(e) => { e.stopPropagation(); setHoveredNode(null); document.body.style.cursor = 'auto'; }}
+                        >
+                            <mesh castShadow receiveShadow>
+                                <sphereGeometry args={[0.4, 24, 24]} />
+                                <meshPhysicalMaterial
+                                    color={nodeColor}
+                                    roughness={0.15}
+                                    transmission={0.0}
+                                    thickness={0.5}
+                                    clearcoat={0.2}
+                                />
+                            </mesh>
+                            <Text
+                                position={[0, 0, 0.45]}
+                                fontSize={0.32}
+                                color="#302a1e"
+                                anchorX="center"
+                                anchorY="middle"
+                                outlineWidth={0.015}
+                                outlineColor="#fcfbf9"
+                            >
+                                {graph.nodes[id]?.label || id}
+                            </Text>
+                        </group>
+                    </DraggableGroup>
+                );
+            })}
+        </group>
+    );
+}
+
+// ─── 3D Bitmask Visualization ────────────────────────────────
+
+const BITMASK_3D_TILE = 0.8;
+const BITMASK_3D_GAP = 0.12;
+
+const BITMASK_3D_COLORS: Record<string, string> = {
+    cols: '#ef4444',
+    ld: '#f97316',
+    rd: '#eab308',
+    pos: '#22c55e',
+    p: '#3b82f6',
+    mask: '#8b5cf6',
+    used: '#ef4444',
+    queen: '#3b82f6',
+};
+
+function getBitmask3DColor(name: string): string {
+    const lower = name.toLowerCase();
+    for (const [key, color] of Object.entries(BITMASK_3D_COLORS)) {
+        if (lower.includes(key)) return color;
+    }
+    return '#6b7280';
+}
+
+/** Detect bit-width from scope */
+function detectBitWidth3D(stack: Record<string, unknown>): number | null {
+    const ub = stack['upper_bound'] ?? stack['upperBound'] ?? stack['all_ones'];
+    const n = stack['n'] ?? stack['N'] ?? stack['num_bits'] ?? stack['size'];
+    if (typeof ub === 'number' && ub > 0) {
+        const w = Math.round(Math.log2(ub + 1));
+        if ((1 << w) - 1 === ub && w >= 2 && w <= 32) return w;
+    }
+    if (typeof n === 'number' && n >= 2 && n <= 32 && Number.isInteger(n)) return n;
+    return null;
+}
+
+const BITMASK_SKIP_NAMES = new Set(['n', 'N', 'count', 'upper_bound', 'row', 'num_bits', 'size', 'upper_bound']);
+const BITMASK_KNOWN_NAMES = new Set([
+    'cols', 'ld', 'rd', 'pos', 'p', 'mask', 'bits', 'used',
+    'diag1', 'diag2', 'col_mask', 'row_mask', 'avail', 'available', 'blocked', 'queen',
+]);
+
+/** One row of 3D bit tiles for a single bitmask variable */
+function BitMaskStrip3D({
+    name,
+    value,
+    bitWidth,
+    yPos,
+    prevValue,
+}: {
+    name: string;
+    value: number;
+    bitWidth: number;
+    yPos: number;
+    prevValue?: unknown;
+}) {
+    const color = getBitmask3DColor(name);
+    const stride = BITMASK_3D_TILE + BITMASK_3D_GAP;
+    const totalWidth = bitWidth * stride;
+    const changed = prevValue !== undefined && prevValue !== value;
+
+    return (
+        <group position={[0, yPos, 0]}>
+            {/* Label */}
+            <Text
+                position={[-totalWidth / 2 - 0.8, 0, 0.05]}
+                fontSize={0.28}
+                color={changed ? '#16a34a' : color}
+                anchorX="right"
+                anchorY="middle"
+                fontWeight={700}
+            >
+                {name}
+            </Text>
+
+            {/* Bit tiles */}
+            {Array.from({ length: bitWidth }, (_, i) => {
+                const bitIdx = bitWidth - 1 - i;
+                const isSet = ((value >> bitIdx) & 1) === 1;
+                const x = (i - (bitWidth - 1) / 2) * stride;
+
+                return (
+                    <group key={i} position={[x, 0, 0]}>
+                        <RoundedBox
+                            args={[BITMASK_3D_TILE, BITMASK_3D_TILE, 0.15]}
+                            radius={0.06}
+                            smoothness={2}
+                        >
+                            <meshStandardMaterial
+                                color={isSet ? color : '#e8e5de'}
+                                transparent
+                                opacity={isSet ? 0.85 : 0.4}
+                            />
+                        </RoundedBox>
+                        <Text
+                            position={[0, 0, 0.1]}
+                            fontSize={0.3}
+                            color={isSet ? '#ffffff' : '#bbb5a8'}
+                            anchorX="center"
+                            anchorY="middle"
+                            fontWeight={700}
+                        >
+                            {isSet ? '1' : '0'}
+                        </Text>
+                    </group>
+                );
+            })}
+
+            {/* Decimal value */}
+            <Text
+                position={[totalWidth / 2 + 0.6, 0, 0.05]}
+                fontSize={0.22}
+                color="#a8967f"
+                anchorX="left"
+                anchorY="middle"
+            >
+                = {value}
+            </Text>
+        </group>
+    );
+}
+
+/** Combined NxN board for current row — 3D version */
+function BitMaskBoard3D({
+    row,
+    bitWidth,
+    cols,
+    ld,
+    rd,
+    pos,
+    p,
+    yPos,
+}: {
+    row: number;
+    bitWidth: number;
+    cols: number;
+    ld: number;
+    rd: number;
+    pos: number;
+    p: number;
+    yPos: number;
+}) {
+    const stride = BITMASK_3D_TILE + BITMASK_3D_GAP;
+
+    return (
+        <group position={[0, yPos, 0]}>
+            {/* Label */}
+            <Text
+                position={[0, 0.7, 0.05]}
+                fontSize={0.22}
+                color="#a8967f"
+                anchorX="center"
+                anchorY="middle"
+            >
+                Board Row {row}
+            </Text>
+
+            {Array.from({ length: bitWidth }, (_, i) => {
+                const bitIdx = bitWidth - 1 - i;
+                const isCol = (cols >> bitIdx) & 1;
+                const isLD = (ld >> bitIdx) & 1;
+                const isRD = (rd >> bitIdx) & 1;
+                const isBlocked = isCol || isLD || isRD;
+                const isPos = (pos >> bitIdx) & 1;
+                const isPick = (p >> bitIdx) & 1;
+                const x = (i - (bitWidth - 1) / 2) * stride;
+
+                let tileColor = '#e8e5de';
+                let label = '';
+                let labelColor = '#999';
+
+                if (isPick) {
+                    tileColor = '#3b82f6'; label = '♛'; labelColor = '#ffffff';
+                } else if (isPos && !isBlocked) {
+                    tileColor = '#22c55e'; label = '✓'; labelColor = '#ffffff';
+                } else if (isCol) {
+                    tileColor = '#ef4444'; label = '×'; labelColor = '#ffffff';
+                } else if (isLD) {
+                    tileColor = '#f97316'; label = '╲'; labelColor = '#ffffff';
+                } else if (isRD) {
+                    tileColor = '#eab308'; label = '╱'; labelColor = '#ffffff';
+                }
+
+                return (
+                    <group key={i} position={[x, 0, 0]}>
+                        <RoundedBox
+                            args={[BITMASK_3D_TILE, BITMASK_3D_TILE, 0.2]}
+                            radius={0.06}
+                            smoothness={2}
+                        >
+                            <meshStandardMaterial
+                                color={tileColor}
+                                transparent
+                                opacity={isPick || isBlocked || isPos ? 0.9 : 0.3}
+                            />
+                        </RoundedBox>
+                        {label && (
+                            <Text
+                                position={[0, 0, 0.15]}
+                                fontSize={isPick ? 0.4 : 0.28}
+                                color={labelColor}
+                                anchorX="center"
+                                anchorY="middle"
+                                fontWeight={700}
+                            >
+                                {label}
+                            </Text>
+                        )}
+                    </group>
                 );
             })}
         </group>
@@ -1371,6 +1788,7 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
     const grids: Array<{ name: string; value: unknown[][] }> = [];
     const dicts: Array<{ name: string; value: Record<string, unknown> }> = [];
     const adjLists: Array<{ name: string; value: Record<string, number[]> }> = [];
+    const structuredGraphs: Array<{ name: string; value: StructuredGraphData }> = [];
     const scalars: Array<{ name: string; value: unknown }> = [];
 
     for (const v of sortedVars) {
@@ -1388,11 +1806,14 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
                 }
             }
         } else if (v.type === "dict") {
-            // Check for linked list first (serialized as {__type__: "linked_list", values: [...]})
             if (isLinkedListValue(v.value)) {
                 linkedLists.push({ name: v.name, values: (v.value as { __type__: string; values: unknown[] }).values });
             } else if (isAdjList(v.value)) {
-                adjLists.push({ name: v.name, value: v.value as Record<string, number[]> });
+                if ((v.value as any).__type__ === "structured_graph") {
+                    structuredGraphs.push({ name: v.name, value: v.value as StructuredGraphData });
+                } else {
+                    adjLists.push({ name: v.name, value: v.value as Record<string, number[]> });
+                }
             } else {
                 dicts.push({ name: v.name, value: v.value as Record<string, unknown> });
             }
@@ -1400,6 +1821,32 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
             scalars.push({ name: v.name, value: v.value });
         }
     }
+
+    // ─── Bitmask Detection ───
+    const bitWidth = detectBitWidth3D(step.stack);
+    const bitmaskVars: Array<{ name: string; value: number }> = [];
+    if (bitWidth) {
+        const maxVal = (1 << bitWidth) - 1;
+        // Extract bitmask variables from scalars
+        for (const s of scalars) {
+            if (typeof s.value !== 'number' || !Number.isInteger(s.value as number) || (s.value as number) < 0) continue;
+            if (BITMASK_SKIP_NAMES.has(s.name)) continue;
+            const isKnown = BITMASK_KNOWN_NAMES.has(s.name.toLowerCase());
+            const fits = (s.value as number) <= maxVal;
+            if (isKnown || fits) {
+                bitmaskVars.push({ name: s.name, value: s.value as number });
+            }
+        }
+        // Filter out arrays whose items are tuples/binstrings (noise like state_history)
+        for (let i = plainArrays.length - 1; i >= 0; i--) {
+            const arr = plainArrays[i].value;
+            if (arr.length > 0 && Array.isArray(arr[0])) {
+                // Array of tuples — remove from display
+                plainArrays.splice(i, 1);
+            }
+        }
+    }
+    const hasBitmaskContext = bitWidth !== null && bitmaskVars.length > 0;
 
     // For backward compat: combine all array-like for layout sizing
     const allArrayLike = [...plainArrays, ...stacks, ...queues];
@@ -1509,6 +1956,48 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
                             />
                         );
                     })}
+                </DraggableGroup>
+            )}
+
+            {/* ─── 3D Bitmask Visualization ─── */}
+            {hasBitmaskContext && bitWidth && (
+                <DraggableGroup persistKey="drag_bitmask" initialPosition={[0, 0, 0]}>
+                    {/* Title */}
+                    <Text
+                        position={[0, scalarYTop - 0.5, 0.05]}
+                        fontSize={0.28}
+                        color="#a8967f"
+                        anchorX="center"
+                        anchorY="middle"
+                    >
+                        Bitmask State ({bitWidth}-bit)
+                    </Text>
+
+                    {/* Bit strips for each variable */}
+                    {bitmaskVars.map((mv, idx) => (
+                        <BitMaskStrip3D
+                            key={mv.name}
+                            name={mv.name}
+                            value={mv.value}
+                            bitWidth={bitWidth}
+                            yPos={scalarYTop - 1.5 - idx * 1.1}
+                            prevValue={prevStep?.stack[mv.name]}
+                        />
+                    ))}
+
+                    {/* Board overlay */}
+                    {typeof step.stack['row'] === 'number' && bitmaskVars.some(v => v.name === 'cols') && (
+                        <BitMaskBoard3D
+                            row={step.stack['row'] as number}
+                            bitWidth={bitWidth}
+                            cols={(bitmaskVars.find(v => v.name === 'cols')?.value ?? 0)}
+                            ld={(bitmaskVars.find(v => v.name === 'ld')?.value ?? 0)}
+                            rd={(bitmaskVars.find(v => v.name === 'rd')?.value ?? 0)}
+                            pos={(bitmaskVars.find(v => v.name === 'pos')?.value ?? 0)}
+                            p={(bitmaskVars.find(v => v.name === 'p')?.value ?? 0)}
+                            yPos={scalarYTop - 1.5 - bitmaskVars.length * 1.1 - 1.2}
+                        />
+                    )}
                 </DraggableGroup>
             )}
 
@@ -1696,6 +2185,38 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
                             xOffset={0}
                             zOffset={0}
                         />
+                    </DraggableGroup>
+                );
+            })}
+
+            {/* ─── Structured Graphs (Tries, custom hierarchical objects) ─── */}
+            {structuredGraphs.map((g, idx) => {
+                const rawVisited = step.stack.visited;
+                const visited = Array.isArray(rawVisited) ? rawVisited : rawVisited && typeof rawVisited === 'object' ? Object.keys(rawVisited) : [];
+                const rawQueue = step.stack.queue;
+                const queue = Array.isArray(rawQueue) ? rawQueue : rawQueue && typeof rawQueue === 'object' ? Object.keys(rawQueue) : [];
+                const current = step.stack.current ?? step.stack.node ?? step.stack.curr;
+
+                // Spread multiple graphs along X axis
+                const graphSpacing = 20;
+                const xPos = GRAPH_X_OFFSET + (adjLists.length + idx) * graphSpacing;
+
+                return (
+                    <DraggableGroup key={g.name} persistKey={`drag_struct_graph_${g.name}`} initialPosition={[xPos, 5, 0]}>
+                        {/* Label */}
+                        <Text position={[0, 2, 0]} fontSize={0.35} color="#cbd5e1" anchorX="center">
+                            {g.name} (Trie)
+                        </Text>
+                        <SceneErrorBoundary>
+                            <StructuredGraph3D
+                                graph={g.value}
+                                visited={visited}
+                                queue={queue}
+                                current={current}
+                                xOffset={0}
+                                zOffset={0}
+                            />
+                        </SceneErrorBoundary>
                     </DraggableGroup>
                 );
             })}

@@ -122,3 +122,108 @@ export function useGraphLayout(
         return { layout, edges: edgeList, nodes: nodeIds };
     }, [adj, scale, iterations]);
 }
+
+export interface GraphNodeData {
+    label: string;
+    isRoot?: boolean;
+}
+
+export interface GraphEdgeData {
+    from: string;
+    to: string;
+    type?: string;
+    label?: string;
+}
+
+export interface StructuredGraphData {
+    __type__: "structured_graph";
+    nodes: Record<string, GraphNodeData>;
+    edges: GraphEdgeData[];
+    adjList: Record<string, string[]>;
+}
+
+/**
+ * A simple hierarchical layout for trees and tries.
+ * It ignores "fail" or "parent" links for structuring, creating a top-down depth map,
+ * and spaces nodes horizontally out at each depth level.
+ */
+export function useHierarchicalGraphLayout(
+    graph: StructuredGraphData | null,
+    levelHeight: number = 2.5,
+    nodeWidth: number = 2.5
+) {
+    return useMemo(() => {
+        if (!graph || Object.keys(graph.nodes).length === 0) {
+            return { layout: new Map<string, { x: number; y: number }>(), edges: [], nodes: [] };
+        }
+
+        const nodes = Object.keys(graph.nodes).sort();
+        const edges = graph.edges;
+
+        // 1. Find roots. A root is explicitly marked, or has in-degree 0 for 'child' edges
+        const inDegree = new Map<string, number>();
+        nodes.forEach(n => inDegree.set(n, 0));
+
+        edges.forEach(e => {
+            if (e.type !== "fail" && e.type !== "parent") {
+                inDegree.set(e.to, (inDegree.get(e.to) || 0) + 1);
+            }
+        });
+
+        const roots = nodes.filter(n => graph.nodes[n].isRoot || inDegree.get(n) === 0);
+        if (roots.length === 0 && nodes.length > 0) roots.push(nodes[0]); // fallback
+
+        // 2. BFS to assign depth
+        const depths = new Map<string, number>();
+        const levelMap = new Map<number, string[]>(); // depth -> array of node IDs
+        let maxDepth = 0;
+
+        const queue: { id: string; depth: number }[] = roots.map(r => ({ id: r, depth: 0 }));
+        const visited = new Set<string>();
+
+        while (queue.length > 0) {
+            const { id, depth } = queue.shift()!;
+            if (visited.has(id)) continue;
+            visited.add(id);
+            depths.set(id, depth);
+            maxDepth = Math.max(maxDepth, depth);
+
+            if (!levelMap.has(depth)) levelMap.set(depth, []);
+            levelMap.get(depth)!.push(id);
+
+            // queue children
+            edges.forEach(e => {
+                if (e.from === id && e.type !== "fail" && e.type !== "parent" && !visited.has(e.to)) {
+                    queue.push({ id: e.to, depth: depth + 1 });
+                }
+            });
+        }
+
+        // Catch disconnected nodes
+        nodes.forEach(n => {
+            if (!visited.has(n)) {
+                depths.set(n, 0);
+                if (!levelMap.has(0)) levelMap.set(0, []);
+                levelMap.get(0)!.push(n);
+            }
+        });
+
+        // 3. Assign coordinates
+        const layout = new Map<string, { x: number; y: number }>();
+        const totalHeight = maxDepth * levelHeight;
+
+        for (const [depth, levelNodes] of levelMap.entries()) {
+            // Sort nodes at this level to keep layout somewhat deterministic and pretty
+            levelNodes.sort();
+            const width = levelNodes.length * nodeWidth;
+            const startX = -width / 2 + nodeWidth / 2;
+            const y = totalHeight / 2 - depth * levelHeight;
+
+            levelNodes.forEach((id, i) => {
+                layout.set(id, { x: startX + i * nodeWidth, y });
+            });
+        }
+
+        return { layout, edges, nodes };
+    }, [graph, levelHeight, nodeWidth]);
+}

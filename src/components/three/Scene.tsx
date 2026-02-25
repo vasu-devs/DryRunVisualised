@@ -103,11 +103,11 @@ function CameraToolbar({
     onZoomOut: () => void;
 }) {
     const btnBase =
-        "flex items-center justify-center w-8 h-8 rounded-lg text-xs font-semibold transition-all duration-150 backdrop-blur-md border select-none";
+        "flex items-center justify-center w-8 h-8 rounded-full text-xs font-semibold transition-all duration-150 select-none";
     const active =
-        "bg-cream-800/80 text-cream-50 border-cream-700/60 shadow-lg shadow-cream-900/20";
+        "neu-pressed text-[var(--accent-cyan)]";
     const inactive =
-        "bg-cream-100/60 text-cream-600 border-cream-200/50 hover:bg-cream-200/70 hover:text-cream-900";
+        "neu-raised text-slate-500 hover:text-slate-800";
 
     return (
         <div
@@ -115,7 +115,7 @@ function CameraToolbar({
             style={{ pointerEvents: "auto" }}
         >
             {/* Mode Toggle */}
-            <div className="flex items-center bg-cream-50/70 backdrop-blur-md rounded-xl p-1 border border-cream-200/40 gap-1">
+            <div className="flex items-center neu-pressed p-2 rounded-full gap-2">
                 <button
                     onClick={() => setMode("pan")}
                     className={`${btnBase} ${mode === "pan" ? active : inactive}`}
@@ -142,7 +142,7 @@ function CameraToolbar({
             </div>
 
             {/* Zoom */}
-            <div className="flex items-center bg-cream-50/70 backdrop-blur-md rounded-xl p-1 border border-cream-200/40 gap-1">
+            <div className="flex items-center neu-pressed p-2 rounded-full gap-2">
                 <button
                     onClick={onZoomIn}
                     className={`${btnBase} ${inactive}`}
@@ -223,12 +223,12 @@ export function Scene() {
 
     if (contextLost) {
         return (
-            <div className="w-full h-full flex items-center justify-center bg-cream-50 text-cream-600">
-                <div className="text-center">
-                    <p className="text-lg mb-2">WebGL context lost</p>
+            <div className="w-full h-full flex items-center justify-center bg-[var(--bg-neu)] text-[var(--text-main)]">
+                <div className="text-center neu-raised p-8">
+                    <p className="text-lg mb-4 font-semibold">WebGL context lost</p>
                     <button
                         onClick={() => setContextLost(false)}
-                        className="px-4 py-2 bg-cream-800 text-cream-50 rounded-lg hover:bg-cream-900 transition-colors"
+                        className="px-6 py-2 neu-raised text-[var(--accent-cyan)] font-bold transition-all"
                     >
                         Reload 3D View
                     </button>
@@ -238,13 +238,13 @@ export function Scene() {
     }
 
     return (
-        <div className="relative w-full h-full bg-cream-50" ref={canvasContainerRef}>
+        <div className="relative w-full h-full bg-transparent" ref={canvasContainerRef}>
             {/* 3D Canvas */}
             <Canvas
                 shadows
                 gl={{
                     antialias: true,
-                    alpha: false,
+                    alpha: true,
                     powerPreference: "default",
                     failIfMajorPerformanceCaveat: false,
                 }}
@@ -284,8 +284,8 @@ export function Scene() {
                         fadeStrength={1.5}
                         cellSize={0.6}
                         sectionSize={3}
-                        sectionColor="#cbd5e1"
-                        cellColor="#e2e8f0"
+                        sectionColor="#3f3f46"
+                        cellColor="#27272a"
                         position={[0, -0.01, 0]}
                     />
 
@@ -300,7 +300,7 @@ export function Scene() {
                         </group>
                     )}
 
-                    <color attach="background" args={["#fcfbf9"]} />
+
                 </Suspense>
             </Canvas>
 
@@ -314,7 +314,7 @@ export function Scene() {
             />
 
             {/* Hint text */}
-            <div className="absolute top-2 left-2 z-10 text-[10px] text-cream-500/60 font-mono pointer-events-none select-none">
+            <div className="absolute top-4 left-4 z-10 text-[10px] text-slate-500 font-mono pointer-events-none select-none">
                 {cameraMode === "pan"
                     ? "LMB: Pan · RMB: Orbit · Scroll: Zoom"
                     : "LMB: Orbit · RMB: Pan · Scroll: Zoom"}

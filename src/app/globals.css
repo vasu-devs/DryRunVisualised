@@ -1,22 +1,35 @@
 @import "tailwindcss";
 
 @theme {
-  --color-cream-50: #fcfbf9;
-  --color-cream-100: #f5f2eb;
-  --color-cream-200: #e8e2d4;
-  --color-cream-300: #d6ccb5;
-  --color-cream-400: #c2b19c;
-  --color-cream-500: #a8967f;
-  --color-cream-600: #8f7d64;
-  --color-cream-700: #75664d;
-  --color-cream-800: #615541;
-  --color-cream-900: #524838;
-  --color-cream-950: #302a1e;
+  --color-brand-purple: #7c3aed;
+  --color-brand-pink: #db2777;
+  --color-brand-blue: #2563eb;
+
+  --color-cream-50: #ffffff;
+  --color-cream-100: #faf7f2;
+  --color-cream-200: #f5f2eb;
+  --color-cream-300: #ebe5d9;
+  --color-cream-400: #dbd3c3;
+  --color-cream-500: #c2baaa;
+  --color-cream-800: #5c564c;
+  --color-cream-900: #423e37;
+
+  --font-sans: var(--font-outfit), "Inter", sans-serif;
+  --font-mono: var(--font-fira-code), monospace;
 }
 
 :root {
-  --background: #fcfbf9;
-  --foreground: #302a1e;
+  --bg-neu: #e2e2e2;
+  --text-main: #333333;
+  --accent-cyan: #111111;
+  /* Changed to dark near-black for the monotonic look */
+  --shadow-dark: #bebebe;
+  --shadow-light: #ffffff;
+
+  --background: var(--bg-neu);
+  --foreground: var(--text-main);
+
+  /* Shared standard tokens */
   --blue-600: #2563eb;
   --blue-500: #3b82f6;
   --slate-950: #020617;
@@ -34,31 +47,74 @@ body {
   color: var(--foreground);
   margin: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.matte-glass {
-  background-color: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+/* ─────────────────────────────────────────────────────────────────
+   Neumorphic (Soft UI) Utilities
+   ───────────────────────────────────────────────────────────────── */
+
+.neu-raised {
+  background-color: var(--bg-neu);
+  box-shadow:
+    5px 5px 12px var(--shadow-dark),
+    -5px -5px 12px var(--shadow-light);
+  border-radius: 20px;
+  color: var(--text-main);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-.matte-glass-darker {
-  background-color: rgba(245, 242, 235, 0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+.neu-raised:active.clickable,
+button.neu-raised:active,
+.neu-raised-pressed {
+  box-shadow:
+    inset 3px 3px 8px var(--shadow-dark),
+    inset -3px -3px 8px var(--shadow-light);
+  border: 1px solid transparent;
+}
+
+.neu-pressed {
+  background-color: var(--bg-neu);
+  box-shadow:
+    inset 4px 4px 10px var(--shadow-dark),
+    inset -4px -4px 10px var(--shadow-light);
+  border-radius: 20px;
+  color: var(--text-main);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.neu-convex {
+  background: linear-gradient(145deg, #f2f2f2, #cccccc);
+  box-shadow:
+    4px 4px 10px var(--shadow-dark),
+    -4px -4px 10px var(--shadow-light);
+  border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.01), 0 2px 12px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
 }
 
-.glass-card {
-  background-color: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(30, 41, 59, 0.5);
+.neu-concave {
+  background: linear-gradient(145deg, #cccccc, #f2f2f2);
+  box-shadow:
+    inset 4px 4px 10px var(--shadow-dark),
+    inset -4px -4px 10px var(--shadow-light);
+  border-radius: 50%;
 }
 
-/* Custom Scrollbar */
+.neu-slider-track {
+  background-color: var(--bg-neu);
+  box-shadow:
+    inset 4px 4px 8px var(--shadow-dark),
+    inset -4px -4px 8px var(--shadow-light);
+  border-radius: 9999px;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Custom Scrollbar & Components
+   ───────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -69,15 +125,15 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--slate-700);
+  background: rgba(0, 0, 0, 0.2);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--slate-600);
+  background: rgba(0, 0, 0, 0.4);
 }
 
-/* Monaco override */
+/* Monaco Override */
 .monaco-editor,
 .monaco-editor .margin,
 .monaco-editor-background {
@@ -95,19 +151,18 @@ input[type="range"] {
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 12px;
-  height: 12px;
-  background: var(--blue-500);
+  width: 16px;
+  height: 16px;
+  background: var(--color-brand-red);
   border-radius: 50%;
   cursor: pointer;
-  margin-top: -5px;
-  /* Centers thumb on track */
+  margin-top: -6px;
 }
 
 input[type="range"]::-webkit-slider-runnable-track {
   width: 100%;
-  height: 2px;
+  height: 3px;
   cursor: pointer;
-  background: var(--slate-700);
-  border-radius: 1px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
 }

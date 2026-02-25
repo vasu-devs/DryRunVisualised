@@ -128,8 +128,11 @@ function isCustomObjectGraph(val: unknown): boolean {
     return true;
 }
 
-function buildAdjacencyList(root: any): Record<string, string[]> {
+function buildAdjacencyList(root: any): any {
     const adj: Record<string, string[]> = {};
+    const nodesRecord: Record<string, { label: string; isRoot?: boolean }> = {};
+    const edgesList: Array<{ from: string; to: string; label?: string; type?: string }> = [];
+
     const nodeMap = new Map<number, any>(); // id -> object
 
     // Pass 1: Collect all objects and resolve their labels
@@ -197,36 +200,53 @@ function buildAdjacencyList(root: any): Record<string, string[]> {
     // Pass 2: Build edges
     for (const [id, obj] of nodeMap.entries()) {
         const sourceLabel = idToLabel.get(id)!;
-        const edges: string[] = [];
+        nodesRecord[sourceLabel] = { label: sourceLabel, isRoot: obj === root };
+        const rawEdges: string[] = [];
 
-        function extractEdges(val: any) {
-            if (!val || typeof val !== "object") return;
-            if (Array.isArray(val)) {
-                val.forEach(extractEdges);
-            } else if (val.__id__ && val.__cls__) {
-                if (val.__id__ !== id) {
-                    edges.push(idToLabel.get(val.__id__)!);
-                }
-            } else if (val.__ref__) {
-                if (val.__ref__ !== id && idToLabel.has(val.__ref__)) {
-                    edges.push(idToLabel.get(val.__ref__)!);
-                }
-            } else {
-                for (const v of Object.values(val)) {
-                    extractEdges(v);
-                }
+        function addEdge(targetVal: any, edgeLabel?: string) {
+            if (!targetVal) return;
+            const targetId = targetVal.__id__ || targetVal.__ref__;
+            if (targetId && targetId !== id && idToLabel.has(targetId)) {
+                const targetLabel = idToLabel.get(targetId)!;
+                rawEdges.push(targetLabel);
+
+                // Determine edge type (e.g. fail links) and label
+                let type = "child";
+                if (edgeLabel && edgeLabel.toLowerCase().includes("fail")) type = "fail";
+                else if (edgeLabel && edgeLabel.toLowerCase().includes("parent")) type = "parent";
+
+                edgesList.push({ from: sourceLabel, to: targetLabel, label: edgeLabel, type });
             }
         }
 
-        // Only scan fields of this object (skip __id__ and __cls__)
+        // Scan fields of this object
         for (const [k, v] of Object.entries(obj)) {
-            if (k !== "__id__" && k !== "__cls__") {
-                extractEdges(v);
+            if (k === "__id__" || k === "__cls__") continue;
+
+            if (!v || typeof v !== "object") continue;
+            if (Array.isArray(v)) {
+                // List of pointers
+                v.forEach(item => addEdge(item, k));
+            } else if ((v as any).__id__ || (v as any).__ref__) {
+                // Direct pointer (e.g., self.fail = Node)
+                addEdge(v, k);
+            } else {
+                // Likely a dictionary (e.g., self.children = {'a': Node})
+                for (const [dictKey, dictVal] of Object.entries(v)) {
+                    // Combine the dict property name and the key, or just use the key if it's descriptive
+                    // usually for Tries, the key 'a' is what we want on the edge
+                    addEdge(dictVal, dictKey);
+                }
             }
         }
 
-        adj[sourceLabel] = edges;
+        adj[sourceLabel] = rawEdges;
     }
 
-    return adj;
+    return {
+        __type__: "structured_graph",
+        nodes: nodesRecord,
+        edges: edgesList,
+        adjList: adj
+    };
 }

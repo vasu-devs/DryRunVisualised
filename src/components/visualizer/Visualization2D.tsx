@@ -15,24 +15,29 @@ interface Visualization2DProps {
 // ─── Color Palette ───────────────────────────────────────────
 const COLORS = {
     bg: "transparent",
-    cardBg: "#ffffff",
-    cardBorder: "#e8e2d4",
-    text: "#302a1e",
-    textDim: "#615541",
-    textMuted: "#a8967f",
-    accent: "#615541",
-    accentDim: "#75664d",
-    pointer: "#ea580c",
-    pointerBg: "#ffedd5",
-    changed: "#16a34a",
-    changedBg: "#dcfce7",
-    highlight: "#9333ea",
-    highlightBg: "#f3e8ff",
-    danger: "#dc2626",
-    cellDefault: "#ffffff",
-    cellHighlight: "#f3e8ff",
-    cellPointer: "#ffedd5",
+    cardBg: "var(--bg-neu)",
+    cardBorder: "transparent", // Use shadows instead of borders
+    text: "var(--text-main)",
+    textDim: "var(--slate-500)",
+    textMuted: "var(--slate-400)",
+    accent: "var(--slate-700)",
+    accentDim: "var(--slate-400)",
+    pointer: "var(--accent-cyan)",
+    pointerBg: "var(--bg-neu)",
+    changed: "#f59e0b",
+    changedBg: "var(--bg-neu)",
+    highlight: "#10b981",
+    highlightBg: "var(--bg-neu)",
+    danger: "#ef4444",
+    cellDefault: "var(--bg-neu)",
+    cellHighlight: "var(--bg-neu)",
+    cellPointer: "var(--bg-neu)",
 };
+
+const NEU_SHADOW_RAISED = "5px 5px 12px var(--shadow-dark), -5px -5px 12px var(--shadow-light)";
+const NEU_SHADOW_PRESSED = "inset 3px 3px 8px var(--shadow-dark), inset -3px -3px 8px var(--shadow-light)";
+const NEU_RADIUS_SMALL = "10px";
+const NEU_RADIUS_MD = "16px";
 
 /**
  * Classifies a value for rendering
@@ -49,6 +54,7 @@ function classifyValue(val: unknown): "array" | "dict" | "scalar" | "none" {
  */
 function isAdjList(val: unknown): boolean {
     if (typeof val !== "object" || val === null || Array.isArray(val)) return false;
+    if ((val as any).__type__ === "structured_graph") return true;
     const entries = Object.entries(val as Record<string, unknown>);
     return entries.length >= 2 && entries.every(([, v]) => Array.isArray(v));
 }
@@ -178,19 +184,16 @@ function ArrayRow({
                                 alignItems: "center",
                                 justifyContent: "center",
                                 padding: "0 6px",
-                                background: isPointed
-                                    ? `${pointedBy[0].color}30`
-                                    : changed
-                                        ? COLORS.changedBg
-                                        : COLORS.cellDefault,
+                                background: COLORS.cellDefault,
+                                boxShadow: isPointed || changed ? NEU_SHADOW_PRESSED : NEU_SHADOW_RAISED,
                                 border: `2px solid ${isPointed
                                     ? pointedBy[0].color
                                     : changed
                                         ? COLORS.changed
-                                        : COLORS.cardBorder
+                                        : "transparent"
                                     }`,
-                                borderRadius: 6,
-                                transition: "all 0.2s ease",
+                                borderRadius: NEU_RADIUS_SMALL,
+                                transition: "all 0.2s cubic-bezier(0.25, 1, 0.5, 1)",
                             }}>
                                 <span style={{
                                     color: changed ? COLORS.changed : COLORS.text,
@@ -241,20 +244,17 @@ function ScalarBadge({
             display: "inline-flex",
             alignItems: "center",
             gap: 6,
-            padding: "4px 10px",
-            borderRadius: 6,
-            background: changed
-                ? COLORS.changedBg
-                : isPointer
-                    ? COLORS.pointerBg
-                    : COLORS.cardBg,
-            border: `1px solid ${changed
+            padding: "8px 14px",
+            borderRadius: NEU_RADIUS_MD,
+            background: COLORS.cardBg,
+            boxShadow: NEU_SHADOW_RAISED,
+            border: `2px solid ${changed
                 ? COLORS.changed
                 : isPointer
                     ? COLORS.pointer
-                    : COLORS.cardBorder
+                    : "transparent"
                 }`,
-            transition: "all 0.2s ease",
+            transition: "all 0.2s cubic-bezier(0.25, 1, 0.5, 1)",
         }}>
             <span style={{
                 fontSize: 11,
@@ -348,10 +348,12 @@ function LinkedListView2D({ name, values }: { name: string; values: unknown[] })
                         <div style={{
                             display: "flex",
                             alignItems: "stretch",
-                            border: `2px solid ${idx === 0 ? "#22c55e" : "#bbf7d0"}`,
-                            borderRadius: 6,
+                            border: `2px solid ${idx === 0 ? "#22c55e" : "transparent"}`,
+                            borderRadius: NEU_RADIUS_SMALL,
                             overflow: "hidden",
-                            background: idx === 0 ? "#dcfce7" : COLORS.cardBg,
+                            background: idx === 0 ? COLORS.changedBg : COLORS.cardBg,
+                            boxShadow: idx === 0 ? NEU_SHADOW_PRESSED : NEU_SHADOW_RAISED,
+                            transition: "all 0.2s cubic-bezier(0.25, 1, 0.5, 1)",
                         }}>
                             {/* val compartment */}
                             <div style={{
@@ -360,7 +362,7 @@ function LinkedListView2D({ name, values }: { name: string; values: unknown[] })
                                 alignItems: "center",
                                 justifyContent: "center",
                                 minWidth: 36,
-                                borderRight: "1px solid #bbf7d0",
+                                borderRight: `1px solid var(--shadow-dark)`,
                             }}>
                                 <span style={{
                                     color: COLORS.text,
@@ -451,17 +453,19 @@ function DictView({ name, data, visited, queue, current }: { name: string; data:
             <div style={{
                 display: "flex",
                 flexWrap: "wrap",
-                gap: 4,
-                marginTop: 4,
+                gap: 8,
+                marginTop: 8,
             }}>
                 {entries.map(([k, v]) => (
                     <div key={k} style={{
-                        padding: "3px 8px",
-                        borderRadius: 4,
+                        padding: "6px 12px",
+                        borderRadius: NEU_RADIUS_SMALL,
                         background: COLORS.cardBg,
-                        border: `1px solid ${COLORS.cardBorder}`,
-                        fontSize: 11,
+                        boxShadow: NEU_SHADOW_RAISED,
+                        border: `1px solid transparent`,
+                        fontSize: 12,
                         fontFamily: "monospace",
+                        transition: "all 0.2s cubic-bezier(0.25, 1, 0.5, 1)",
                     }}>
                         <span style={{ color: COLORS.accent }}>{k}</span>
                         <span style={{ color: COLORS.textMuted }}>: </span>
@@ -589,17 +593,25 @@ function GraphView2D({
                 {nodeIds.map(id => {
                     const pos = layout.get(id);
                     if (!pos) return null;
-                    let fill = "#f8fafc";
-                    let stroke = "#cbd5e1";
-                    if (id === currentStr) { fill = "#ffedd5"; stroke = "#f97316"; }
-                    else if (visitedSet.has(id)) { fill = "#dcfce7"; stroke = "#22c55e"; }
-                    else if (queueSet.has(id)) { fill = "#dbeafe"; stroke = "#3b82f6"; }
+                    let fill = "var(--bg-neu)";
+                    let stroke = "var(--shadow-dark)";
+                    let strokeWidth = 2;
+                    let filter = "none";
+
+                    // A simple drop shadow for SVG nodes to mimic Neumorphism
+                    const dropShadow = "drop-shadow(3px 3px 4px var(--shadow-dark)) drop-shadow(-3px -3px 4px var(--shadow-light))";
+
+                    if (id === currentStr) { fill = "var(--bg-neu)"; stroke = "#db2777"; strokeWidth = 3; filter = dropShadow; }
+                    else if (visitedSet.has(id)) { fill = "var(--bg-neu)"; stroke = "#22c55e"; strokeWidth = 3; filter = dropShadow; }
+                    else if (queueSet.has(id)) { fill = "var(--bg-neu)"; stroke = "#3b82f6"; strokeWidth = 3; filter = dropShadow; }
+                    else { filter = dropShadow; fill = "var(--bg-neu)"; }
+
                     return (
                         <g key={id}>
-                            <circle cx={pos.x} cy={pos.y} r={NODE_R} fill={fill} stroke={stroke} strokeWidth={2} />
+                            <circle cx={pos.x} cy={pos.y} r={NODE_R} fill={fill} stroke={stroke} strokeWidth={strokeWidth} style={{ filter }} />
                             <text
                                 x={pos.x} y={pos.y} textAnchor="middle" dominantBaseline="central"
-                                fill={COLORS.text} fontSize={12} fontFamily="monospace" fontWeight={600}
+                                fill={COLORS.text} fontSize={12} fontFamily="monospace" fontWeight={700}
                             >
                                 {id}
                             </text>
@@ -607,6 +619,314 @@ function GraphView2D({
                     );
                 })}
             </svg>
+        </div>
+    );
+}
+
+// ─── Bitmask Variable Detection ──────────────────────────────
+const BITMASK_VAR_NAMES = new Set([
+    'cols', 'ld', 'rd', 'pos', 'p', 'mask', 'bits', 'used',
+    'diag1', 'diag2', 'col_mask', 'row_mask', 'left_diag', 'right_diag',
+    'avail', 'available', 'blocked', 'queen',
+]);
+
+const BITMASK_COLORS: Record<string, string> = {
+    cols: '#ef4444',    // red — columns taken
+    ld: '#f97316',      // orange — left diagonal
+    rd: '#eab308',      // yellow — right diagonal
+    pos: '#22c55e',     // green — available positions
+    p: '#3b82f6',       // blue — current pick
+    mask: '#8b5cf6',    // purple
+    bits: '#8b5cf6',
+    used: '#ef4444',
+    queen: '#3b82f6',
+};
+
+function getBitMaskColor(name: string): string {
+    const lower = name.toLowerCase();
+    for (const [key, color] of Object.entries(BITMASK_COLORS)) {
+        if (lower.includes(key)) return color;
+    }
+    return '#6b7280'; // gray default
+}
+
+/** Detect the bit-width from scope: look for upper_bound = (1<<n)-1, or n itself */
+function detectBitWidth(stack: Record<string, unknown>): number | null {
+    const n = stack['n'] ?? stack['N'] ?? stack['num_bits'] ?? stack['size'];
+    const ub = stack['upper_bound'] ?? stack['upperBound'] ?? stack['all_ones'];
+
+    if (typeof ub === 'number' && ub > 0) {
+        // upper_bound = (1 << n) - 1 means it's all 1s of width n
+        const w = Math.round(Math.log2(ub + 1));
+        if ((1 << w) - 1 === ub && w >= 2 && w <= 32) return w;
+    }
+    if (typeof n === 'number' && n >= 2 && n <= 32 && Number.isInteger(n)) return n;
+    return null;
+}
+
+/** Identifies which scalars in scope are likely bitmask values */
+function getBitMaskVars(
+    scalars: Array<{ name: string; value: unknown }>,
+    bitWidth: number
+): Array<{ name: string; value: number; bits: boolean[] }> {
+    const result: Array<{ name: string; value: number; bits: boolean[] }> = [];
+    const maxVal = (1 << bitWidth) - 1;
+
+    for (const s of scalars) {
+        const v = s.value;
+        if (typeof v !== 'number' || !Number.isInteger(v) || v < 0) continue;
+
+        // Include if name is a known bitmask name OR if the value fits within the bit width
+        const isKnown = BITMASK_VAR_NAMES.has(s.name.toLowerCase());
+        const fitsRange = v <= maxVal && s.name !== 'n' && s.name !== 'N'
+            && s.name !== 'count' && s.name !== 'row' && s.name !== 'upper_bound'
+            && s.name !== 'num_bits' && s.name !== 'size';
+
+        if (isKnown || fitsRange) {
+            // Skip if the variable IS the bit width itself or a counter
+            if (s.name === 'n' || s.name === 'N' || s.name === 'count'
+                || s.name === 'upper_bound' || s.name === 'row') continue;
+
+            const bits: boolean[] = [];
+            for (let i = bitWidth - 1; i >= 0; i--) {
+                bits.push(((v >> i) & 1) === 1);
+            }
+            result.push({ name: s.name, value: v, bits });
+        }
+    }
+    return result;
+}
+
+/** Visual bitmask strip — renders a single value as a row of bit cells */
+function BitMaskStrip({
+    name,
+    value,
+    bits,
+    bitWidth,
+    prevValue,
+}: {
+    name: string;
+    value: number;
+    bits: boolean[];
+    bitWidth: number;
+    prevValue?: unknown;
+}) {
+    const color = getBitMaskColor(name);
+    const changed = prevValue !== undefined && prevValue !== value;
+
+    return (
+        <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '4px 0',
+        }}>
+            {/* Label */}
+            <div style={{
+                minWidth: 60,
+                fontSize: 11,
+                fontWeight: 600,
+                fontFamily: 'monospace',
+                color: changed ? COLORS.changed : color,
+                textAlign: 'right',
+            }}>
+                {name}
+            </div>
+
+            {/* Bit cells */}
+            <div style={{ display: 'flex', gap: 2 }}>
+                {bits.map((bit, i) => (
+                    <div
+                        key={i}
+                        style={{
+                            width: Math.max(20, Math.min(32, 280 / bitWidth)),
+                            height: Math.max(20, Math.min(32, 280 / bitWidth)),
+                            borderRadius: 4,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: Math.max(9, Math.min(12, 180 / bitWidth)),
+                            fontWeight: 700,
+                            fontFamily: 'monospace',
+                            background: bit ? color + '22' : 'rgba(24,24,27,0.5)',
+                            border: `1.5px solid ${bit ? color : 'rgba(255,255,255,0.1)'}`,
+                            color: bit ? color : '#94a3b8',
+                            transition: 'all 0.15s ease',
+                        }}
+                    >
+                        {bit ? '1' : '0'}
+                    </div>
+                ))}
+            </div>
+
+            {/* Decimal value */}
+            <span style={{
+                fontSize: 10,
+                fontFamily: 'monospace',
+                color: COLORS.textMuted,
+                marginLeft: 4,
+            }}>
+                = {value}
+            </span>
+        </div>
+    );
+}
+
+/** Combined N-Queens board view — overlays cols, ld, rd into an NxN grid */
+function BitMaskBoardView({
+    row,
+    bitWidth,
+    maskVars,
+}: {
+    row: number;
+    bitWidth: number;
+    maskVars: Array<{ name: string; value: number; bits: boolean[] }>;
+}) {
+    // Build an NxN board showing blocked/available cells for the current row
+    const colsMask = maskVars.find(v => v.name === 'cols')?.value ?? 0;
+    const ldMask = maskVars.find(v => v.name === 'ld')?.value ?? 0;
+    const rdMask = maskVars.find(v => v.name === 'rd')?.value ?? 0;
+    const posMask = maskVars.find(v => v.name === 'pos')?.value ?? 0;
+    const pMask = maskVars.find(v => v.name === 'p')?.value ?? 0;
+
+    const cellSize = Math.max(18, Math.min(28, 240 / bitWidth));
+
+    return (
+        <div style={{ marginTop: 8 }}>
+            <div style={{
+                fontSize: 10,
+                color: COLORS.textMuted,
+                marginBottom: 4,
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+            }}>
+                Board (Row {row}) — Blocked vs Available
+            </div>
+            <div style={{ display: 'flex', gap: 2 }}>
+                {Array.from({ length: bitWidth }, (_, i) => {
+                    const bitIdx = bitWidth - 1 - i;
+                    const isCol = (colsMask >> bitIdx) & 1;
+                    const isLD = (ldMask >> bitIdx) & 1;
+                    const isRD = (rdMask >> bitIdx) & 1;
+                    const isBlocked = isCol || isLD || isRD;
+                    const isPos = (posMask >> bitIdx) & 1;
+                    const isPick = (pMask >> bitIdx) & 1;
+
+                    let bg = 'rgba(24,24,27,0.5)';
+                    let border = 'rgba(255,255,255,0.1)';
+                    let label = '';
+                    let textColor = '#94a3b8';
+
+                    if (isPick) {
+                        bg = '#3b82f620'; border = '#3b82f6'; label = '♛'; textColor = '#3b82f6';
+                    } else if (isPos && !isBlocked) {
+                        bg = '#22c55e15'; border = '#22c55e'; label = '✓'; textColor = '#22c55e';
+                    } else if (isCol) {
+                        bg = '#ef444415'; border = '#ef4444'; label = '×'; textColor = '#ef4444';
+                    } else if (isLD) {
+                        bg = '#f9731615'; border = '#f97316'; label = '╲'; textColor = '#f97316';
+                    } else if (isRD) {
+                        bg = '#eab30815'; border = '#eab308'; label = '╱'; textColor = '#eab308';
+                    }
+
+                    return (
+                        <div
+                            key={i}
+                            style={{
+                                width: cellSize,
+                                height: cellSize,
+                                borderRadius: 4,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: isPick ? cellSize * 0.6 : cellSize * 0.4,
+                                fontWeight: 700,
+                                background: bg,
+                                border: `1.5px solid ${border}`,
+                                color: textColor,
+                                transition: 'all 0.15s ease',
+                            }}
+                        >
+                            {label}
+                        </div>
+                    );
+                })}
+            </div>
+            {/* Legend */}
+            <div style={{
+                display: 'flex',
+                gap: 10,
+                marginTop: 4,
+                fontSize: 9,
+                color: COLORS.textMuted,
+            }}>
+                <span>♛ = <span style={{ color: '#3b82f6' }}>pick</span></span>
+                <span>✓ = <span style={{ color: '#22c55e' }}>available</span></span>
+                <span>× = <span style={{ color: '#ef4444' }}>col blocked</span></span>
+                <span>╲ = <span style={{ color: '#f97316' }}>left diag</span></span>
+                <span>╱ = <span style={{ color: '#eab308' }}>right diag</span></span>
+            </div>
+        </div>
+    );
+}
+
+/** Full bitmask panel — shows all detected bitmask vars as bit strips + board overlay */
+function BitMaskPanel({
+    scalars,
+    stack,
+    prevStack,
+}: {
+    scalars: Array<{ name: string; value: unknown }>;
+    stack: Record<string, unknown>;
+    prevStack?: Record<string, unknown>;
+}) {
+    const bitWidth = detectBitWidth(stack);
+    if (!bitWidth) return null;
+
+    const maskVars = getBitMaskVars(scalars, bitWidth);
+    if (maskVars.length === 0) return null;
+
+    const row = typeof stack['row'] === 'number' ? (stack['row'] as number) : null;
+
+    return (
+        <div style={{
+            padding: 10,
+            borderRadius: 8,
+            background: COLORS.cardBg,
+            border: `1px solid ${COLORS.cardBorder}`,
+        }}>
+            <div style={{
+                fontSize: 10,
+                color: COLORS.textMuted,
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                marginBottom: 8,
+                fontWeight: 600,
+            }}>
+                Bitmask State ({bitWidth}-bit)
+            </div>
+
+            {/* Individual bit strips */}
+            {maskVars.map(mv => (
+                <BitMaskStrip
+                    key={mv.name}
+                    name={mv.name}
+                    value={mv.value}
+                    bits={mv.bits}
+                    bitWidth={bitWidth}
+                    prevValue={prevStack?.[mv.name]}
+                />
+            ))}
+
+            {/* Combined board view */}
+            {row !== null && maskVars.some(v => v.name === 'cols') && (
+                <BitMaskBoardView
+                    row={row}
+                    bitWidth={bitWidth}
+                    maskVars={maskVars}
+                />
+            )}
         </div>
     );
 }
@@ -680,6 +1000,7 @@ export function Visualization2D({ step, prevStep, vizCtx, isFullscreen = false }
     const linkedLists: Array<{ name: string; values: unknown[] }> = [];
     const dicts: Array<{ name: string; value: Record<string, unknown> }> = [];
     const adjLists: Array<{ name: string; value: Record<string, unknown[]> }> = [];
+    const structuredGraphs: Array<{ name: string; value: any }> = [];
     const scalars: Array<{ name: string; value: unknown }> = [];
 
     for (const v of sortedVars) {
@@ -690,7 +1011,11 @@ export function Visualization2D({ step, prevStep, vizCtx, isFullscreen = false }
             if (isLinkedListValue2D(v.value)) {
                 linkedLists.push({ name: v.name, values: (v.value as { __type__: string; values: unknown[] }).values });
             } else if (isAdjList(v.value)) {
-                adjLists.push({ name: v.name, value: v.value as Record<string, unknown[]> });
+                if ((v.value as any).__type__ === "structured_graph") {
+                    structuredGraphs.push({ name: v.name, value: v.value });
+                } else {
+                    adjLists.push({ name: v.name, value: v.value as Record<string, unknown[]> });
+                }
             } else {
                 dicts.push({ name: v.name, value: v.value as Record<string, unknown> });
             }
@@ -770,6 +1095,13 @@ export function Visualization2D({ step, prevStep, vizCtx, isFullscreen = false }
                         </div>
                     </div>
                 )}
+
+                {/* Bitmask Visualization — auto-detected */}
+                <BitMaskPanel
+                    scalars={scalars}
+                    stack={step.stack}
+                    prevStack={prevStep?.stack}
+                />
 
                 {/* Arrays — rendered as cell rows */}
                 {arrays.length > 0 && (
@@ -870,6 +1202,68 @@ export function Visualization2D({ step, prevStep, vizCtx, isFullscreen = false }
                                     key={g.name}
                                     name={g.name}
                                     adj={g.value as Record<string, number[]>}
+                                    visited={graphVisited}
+                                    queue={graphQueue}
+                                    current={graphCurrent}
+                                />
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* Structured Graphs (Tries, custom objects) */}
+                {structuredGraphs.length > 0 && (
+                    <div>
+                        <div style={{
+                            fontSize: 10,
+                            color: COLORS.textMuted,
+                            textTransform: "uppercase",
+                            letterSpacing: "1px",
+                            marginBottom: 6,
+                            fontWeight: 600,
+                        }}>
+                            Structured Graphs (Tries)
+                        </div>
+                        {structuredGraphs.map(g => {
+                            const graphVisited = step.stack["visited"] as unknown[] | undefined;
+                            const graphQueue = step.stack["queue"] as unknown[] | undefined;
+                            const graphCurrent = step.stack["current"] ?? step.stack["node"] ?? step.stack["curr"];
+                            return (
+                                <GraphView2D
+                                    key={g.name}
+                                    name={g.name}
+                                    adj={g.value.adjList as Record<string, number[]>}
+                                    visited={graphVisited}
+                                    queue={graphQueue}
+                                    current={graphCurrent}
+                                />
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* Structured Graphs (Tries, custom objects) */}
+                {structuredGraphs.length > 0 && (
+                    <div>
+                        <div style={{
+                            fontSize: 10,
+                            color: COLORS.textMuted,
+                            textTransform: "uppercase",
+                            letterSpacing: "1px",
+                            marginBottom: 6,
+                            fontWeight: 600,
+                        }}>
+                            Structured Graphs (Tries)
+                        </div>
+                        {structuredGraphs.map(g => {
+                            const graphVisited = step.stack["visited"] as unknown[] | undefined;
+                            const graphQueue = step.stack["queue"] as unknown[] | undefined;
+                            const graphCurrent = step.stack["current"] ?? step.stack["node"] ?? step.stack["curr"];
+                            return (
+                                <GraphView2D
+                                    key={g.name}
+                                    name={g.name}
+                                    adj={g.value.adjList as Record<string, number[]>}
                                     visited={graphVisited}
                                     queue={graphQueue}
                                     current={graphCurrent}
