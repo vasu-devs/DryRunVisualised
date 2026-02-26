@@ -19,6 +19,11 @@ const GRAPH_SCALE = 2.2;
 // ─── Persistent drag position store (survives re-renders / step changes) ─
 const dragPositionStore = new Map<string, [number, number, number]>();
 
+/** Call this to clear all stored drag positions (e.g. when switching examples/languages) */
+export function clearDragPositions() {
+    dragPositionStore.clear();
+}
+
 // ─── DraggableGroup ─ wraps children in a draggable 3D group ─
 function DraggableGroup({
     children,
@@ -1823,26 +1828,35 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
     }
 
     // ─── Bitmask Detection ───
+    // Only activate bitmask mode when at least one KNOWN bitmask variable
+    // (e.g. 'cols', 'ld', 'rd', 'pos') is present. This prevents false positives
+    // from simple loop variables like i, j, temp in sorting algorithms.
     const bitWidth = detectBitWidth3D(step.stack);
     const bitmaskVars: Array<{ name: string; value: number }> = [];
     if (bitWidth) {
         const maxVal = (1 << bitWidth) - 1;
-        // Extract bitmask variables from scalars
+        const candidateVars: Array<{ name: string; value: number; isKnown: boolean }> = [];
         for (const s of scalars) {
             if (typeof s.value !== 'number' || !Number.isInteger(s.value as number) || (s.value as number) < 0) continue;
             if (BITMASK_SKIP_NAMES.has(s.name)) continue;
             const isKnown = BITMASK_KNOWN_NAMES.has(s.name.toLowerCase());
             const fits = (s.value as number) <= maxVal;
             if (isKnown || fits) {
-                bitmaskVars.push({ name: s.name, value: s.value as number });
+                candidateVars.push({ name: s.name, value: s.value as number, isKnown });
             }
         }
-        // Filter out arrays whose items are tuples/binstrings (noise like state_history)
-        for (let i = plainArrays.length - 1; i >= 0; i--) {
-            const arr = plainArrays[i].value;
-            if (arr.length > 0 && Array.isArray(arr[0])) {
-                // Array of tuples — remove from display
-                plainArrays.splice(i, 1);
+        // Only activate bitmask mode if at least one explicitly named bitmask variable exists
+        const hasKnownBitmask = candidateVars.some(v => v.isKnown);
+        if (hasKnownBitmask) {
+            for (const cv of candidateVars) {
+                bitmaskVars.push({ name: cv.name, value: cv.value });
+            }
+            // Filter out arrays whose items are tuples/binstrings (noise like state_history)
+            for (let i = plainArrays.length - 1; i >= 0; i--) {
+                const arr = plainArrays[i].value;
+                if (arr.length > 0 && Array.isArray(arr[0])) {
+                    plainArrays.splice(i, 1);
+                }
             }
         }
     }
@@ -1870,7 +1884,7 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
     // Far right (GRAPH_X_OFFSET): graphs — placed BEYOND the middle column
     // Top center: scalars
 
-    const ITEM_SPACING = 4;
+    const ITEM_SPACING = 5.5;
     // Right column offset: past the array width + gap
     const RIGHT_COL_X = maxArrayWidth / 2 + 5;
     // Estimate right column width (for grid/dict sizing)

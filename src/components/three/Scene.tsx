@@ -4,8 +4,9 @@ import { Suspense, useMemo, useState, useCallback, useRef, useEffect } from "rea
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, PerspectiveCamera } from "@react-three/drei";
 import { useTraceStore } from "@/lib/store/traceStore";
-import { detectVizType, VizType } from "@/lib/vizDetector";
-import { UniversalScene3D } from "./UniversalScene3D";
+import { detectVizType, VizType, VizContext } from "@/lib/vizDetector";
+import { UniversalScene3D, clearDragPositions } from "./UniversalScene3D";
+import { TraceStep } from "@/lib/interpreter/schema";
 import * as THREE from "three";
 
 /** Camera presets per visualization type */
@@ -190,6 +191,16 @@ export function Scene() {
     const vizCtx = useMemo(() => detectVizType(trace), [trace]);
     const cameraPos = CAMERA_POSITIONS[vizCtx.type];
 
+    // Track trace identity — clear drag positions and force remount when trace changes
+    const traceKeyRef = useRef(0);
+    const prevTraceRef = useRef(trace);
+    if (trace !== prevTraceRef.current) {
+        prevTraceRef.current = trace;
+        traceKeyRef.current += 1;
+        clearDragPositions();
+    }
+    const traceKey = traceKeyRef.current;
+
     // Camera mode: pan (default) or orbit
     const [cameraMode, setCameraMode] = useState<"pan" | "orbit">("pan");
     const [resetKey, setResetKey] = useState(0);
@@ -280,7 +291,7 @@ export function Scene() {
 
                     {/* Universal Visualization */}
                     {currentStep && (
-                        <group position={[0, 0.5, 0]}>
+                        <group key={traceKey} position={[0, 0.5, 0]}>
                             <UniversalScene3D
                                 step={currentStep}
                                 prevStep={prevStep}
