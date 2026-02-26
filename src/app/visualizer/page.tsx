@@ -14,13 +14,18 @@ import { executePyodide } from "@/lib/execution/pyodide";
 import { parseTrace } from "@/lib/interpreter/parsers/traceParser";
 
 // ────────────────────────────────────────────────────────────
-// Algorithm Templates
+// Algorithm Templates (per language)
 // ────────────────────────────────────────────────────────────
 
-const EXAMPLES: Record<string, { label: string; code: string }> = {
-  binary_search: {
-    label: "Binary Search",
-    code: `# Rotated Sorted Array Search
+type LangKey = "python" | "cpp" | "java";
+
+interface Example { label: string; code: string; }
+
+const EXAMPLES: Record<LangKey, Record<string, Example>> = {
+  python: {
+    binary_search: {
+      label: "Binary Search",
+      code: `# Rotated Sorted Array Search
 def search(nums, target):
     left, right = 0, len(nums) - 1
 
@@ -44,22 +49,22 @@ def search(nums, target):
     return -1
 
 result = search([4, 5, 6, 7, 0, 1, 2], 0)`,
-  },
+    },
 
-  bubble_sort: {
-    label: "Bubble Sort",
-    code: `# Bubble Sort
+    bubble_sort: {
+      label: "Bubble Sort",
+      code: `# Bubble Sort
 nums = [5, 2, 8, 1, 9, 3]
 
 for i in range(len(nums)):
     for j in range(0, len(nums) - i - 1):
         if nums[j] > nums[j + 1]:
             nums[j], nums[j + 1] = nums[j + 1], nums[j]`,
-  },
+    },
 
-  selection_sort: {
-    label: "Selection Sort",
-    code: `# Selection Sort
+    selection_sort: {
+      label: "Selection Sort",
+      code: `# Selection Sort
 nums = [64, 25, 12, 22, 11]
 
 for i in range(len(nums)):
@@ -68,11 +73,11 @@ for i in range(len(nums)):
         if nums[j] < nums[min_idx]:
             min_idx = j
     nums[i], nums[min_idx] = nums[min_idx], nums[i]`,
-  },
+    },
 
-  insertion_sort: {
-    label: "Insertion Sort",
-    code: `# Insertion Sort
+    insertion_sort: {
+      label: "Insertion Sort",
+      code: `# Insertion Sort
 nums = [12, 11, 13, 5, 6]
 
 for i in range(1, len(nums)):
@@ -82,11 +87,11 @@ for i in range(1, len(nums)):
         nums[j + 1] = nums[j]
         j -= 1
     nums[j + 1] = key`,
-  },
+    },
 
-  bfs: {
-    label: "BFS (Graph)",
-    code: `# Breadth-First Search
+    bfs: {
+      label: "BFS (Graph)",
+      code: `# Breadth-First Search
 graph = {
     0: [1, 2],
     1: [0, 3, 4],
@@ -106,11 +111,11 @@ while queue:
         for neighbor in graph[current]:
             if neighbor not in visited:
                 queue.append(neighbor)`,
-  },
+    },
 
-  dfs: {
-    label: "DFS (Graph)",
-    code: `# Depth-First Search
+    dfs: {
+      label: "DFS (Graph)",
+      code: `# Depth-First Search
 graph = {
     0: [1, 3],
     1: [0, 2, 4],
@@ -132,11 +137,11 @@ while stack:
         for neighbor in graph[current]:
             if neighbor not in visited:
                 stack.append(neighbor)`,
-  },
+    },
 
-  dijkstra: {
-    label: "Dijkstra",
-    code: `# Dijkstra's Shortest Path
+    dijkstra: {
+      label: "Dijkstra",
+      code: `# Dijkstra's Shortest Path
 graph = {
     0: [1, 2],
     1: [0, 3, 4],
@@ -160,11 +165,11 @@ while queue:
                 distances[neighbor] = new_dist
             if neighbor not in visited:
                 queue.append(neighbor)`,
-  },
+    },
 
-  nqueens: {
-    label: "N-Queens",
-    code: `# N-Queens (4x4)
+    nqueens: {
+      label: "N-Queens",
+      code: `# N-Queens (4x4)
 board = [
     [0, 0, 0, 0],
     [0, 0, 0, 0],
@@ -202,11 +207,11 @@ def solve(board, col):
     return False
 
 solve(board, 0)`,
-  },
+    },
 
-  linear_search: {
-    label: "Linear Search",
-    code: `# Linear Search
+    linear_search: {
+      label: "Linear Search",
+      code: `# Linear Search
 nums = [3, 7, 1, 9, 4, 6, 2]
 target = 9
 
@@ -214,11 +219,11 @@ for i in range(len(nums)):
     if nums[i] == target:
         result = i
         break`,
-  },
+    },
 
-  two_pointer: {
-    label: "Two Pointer",
-    code: `# Two Sum (Sorted Array)
+    two_pointer: {
+      label: "Two Pointer",
+      code: `# Two Sum (Sorted Array)
 nums = [1, 2, 4, 6, 8, 10, 12]
 target = 14
 
@@ -235,11 +240,11 @@ while left < right:
         left += 1
     else:
         right -= 1`,
-  },
+    },
 
-  trapping_rain_water: {
-    label: "Trapping Rain Water",
-    code: `# Trapping Rain Water (Two Pointer)
+    trapping_rain_water: {
+      label: "Trapping Rain Water",
+      code: `# Trapping Rain Water (Two Pointer)
 height = [0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]
 
 left = 0
@@ -261,11 +266,11 @@ while left < right:
         else:
             water += right_max - height[right]
         right -= 1`,
-  },
+    },
 
-  median_sorted_arrays: {
-    label: "Median Sorted Arrays",
-    code: `# Median of Two Sorted Arrays
+    median_sorted_arrays: {
+      label: "Median Sorted Arrays",
+      code: `# Median of Two Sorted Arrays
 nums1 = [1, 3, 8, 9, 15]
 nums2 = [7, 11, 18, 19, 21, 25]
 
@@ -294,15 +299,231 @@ while low <= high:
         high = cut1 - 1
     else:
         low = cut1 + 1`,
+    },
+  },
+
+  // ─── C++ Examples ───
+  cpp: {
+    bubble_sort: {
+      label: "Bubble Sort",
+      code: `// Bubble Sort
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    vector<int> nums = {5, 2, 8, 1, 9, 3};
+    int n = nums.size();
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n - i - 1; j++) {
+            if (nums[j] > nums[j + 1]) {
+                int temp = nums[j];
+                nums[j] = nums[j + 1];
+                nums[j + 1] = temp;
+            }
+        }
+    }
+    return 0;
+}`,
+    },
+    binary_search: {
+      label: "Binary Search",
+      code: `// Binary Search
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    vector<int> nums = {1, 3, 5, 7, 9, 11, 15, 18};
+    int target = 7;
+    int left = 0;
+    int right = nums.size() - 1;
+    int mid = 0;
+    int result = -1;
+
+    while (left <= right) {
+        mid = (left + right) / 2;
+        if (nums[mid] == target) {
+            result = mid;
+            break;
+        } else if (nums[mid] < target) {
+            left = mid + 1;
+        } else {
+            right = mid - 1;
+        }
+    }
+    return 0;
+}`,
+    },
+    selection_sort: {
+      label: "Selection Sort",
+      code: `// Selection Sort
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    vector<int> nums = {64, 25, 12, 22, 11};
+    int n = nums.size();
+    int min_idx = 0;
+
+    for (int i = 0; i < n - 1; i++) {
+        min_idx = i;
+        for (int j = i + 1; j < n; j++) {
+            if (nums[j] < nums[min_idx]) {
+                min_idx = j;
+            }
+        }
+        int temp = nums[i];
+        nums[i] = nums[min_idx];
+        nums[min_idx] = temp;
+    }
+    return 0;
+}`,
+    },
+    two_pointer: {
+      label: "Two Sum",
+      code: `// Two Sum (Sorted Array)
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    vector<int> nums = {1, 2, 4, 6, 8, 10, 12};
+    int target = 14;
+    int left = 0;
+    int right = nums.size() - 1;
+    int current_sum = 0;
+
+    while (left < right) {
+        current_sum = nums[left] + nums[right];
+        if (current_sum == target) {
+            break;
+        } else if (current_sum < target) {
+            left = left + 1;
+        } else {
+            right = right - 1;
+        }
+    }
+    return 0;
+}`,
+    },
+  },
+
+  // ─── Java Examples ───
+  java: {
+    bubble_sort: {
+      label: "Bubble Sort",
+      code: `// Bubble Sort
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        int[] nums = {5, 2, 8, 1, 9, 3};
+        int n = nums.length;
+
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n - i - 1; j++) {
+                if (nums[j] > nums[j + 1]) {
+                    int temp = nums[j];
+                    nums[j] = nums[j + 1];
+                    nums[j + 1] = temp;
+                }
+            }
+        }
+    }
+}`,
+    },
+    binary_search: {
+      label: "Binary Search",
+      code: `// Binary Search
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        int[] nums = {1, 3, 5, 7, 9, 11, 15, 18};
+        int target = 7;
+        int left = 0;
+        int right = nums.length - 1;
+        int mid = 0;
+        int result = -1;
+
+        while (left <= right) {
+            mid = (left + right) / 2;
+            if (nums[mid] == target) {
+                result = mid;
+                break;
+            } else if (nums[mid] < target) {
+                left = mid + 1;
+            } else {
+                right = mid - 1;
+            }
+        }
+    }
+}`,
+    },
+    selection_sort: {
+      label: "Selection Sort",
+      code: `// Selection Sort
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        int[] nums = {64, 25, 12, 22, 11};
+        int n = nums.length;
+        int min_idx = 0;
+
+        for (int i = 0; i < n - 1; i++) {
+            min_idx = i;
+            for (int j = i + 1; j < n; j++) {
+                if (nums[j] < nums[min_idx]) {
+                    min_idx = j;
+                }
+            }
+            int temp = nums[i];
+            nums[i] = nums[min_idx];
+            nums[min_idx] = temp;
+        }
+    }
+}`,
+    },
+    two_pointer: {
+      label: "Two Sum",
+      code: `// Two Sum (Sorted Array)
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        int[] nums = {1, 2, 4, 6, 8, 10, 12};
+        int target = 14;
+        int left = 0;
+        int right = nums.length - 1;
+        int current_sum = 0;
+
+        while (left < right) {
+            current_sum = nums[left] + nums[right];
+            if (current_sum == target) {
+                break;
+            } else if (current_sum < target) {
+                left = left + 1;
+            } else {
+                right = right - 1;
+            }
+        }
+    }
+}`,
+    },
   },
 };
 
+const DEFAULT_LANG: LangKey = "python";
 const DEFAULT_EXAMPLE = "binary_search";
 
 export default function Home() {
+  const [language, setLanguage] = useState<LangKey>(DEFAULT_LANG);
   const [selectedExample, setSelectedExample] = useState(DEFAULT_EXAMPLE);
-  const [code, setCode] = useState(EXAMPLES[DEFAULT_EXAMPLE].code);
-  const [language] = useState("python");
+  const [code, setCode] = useState(EXAMPLES[DEFAULT_LANG][DEFAULT_EXAMPLE].code);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionStatus, setExecutionStatus] = useState("");
   const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
@@ -323,23 +544,38 @@ export default function Home() {
     setIsExecuting(true);
     setTrace([]);
     try {
-      // Instrument the Python code (pure JS string manipulation)
-      setExecutionStatus("Loading Python engine...");
-      const instrumentedCode = instrumentPython(code);
+      if (language === "python") {
+        // Python: client-side Pyodide execution
+        setExecutionStatus("Loading Python engine...");
+        const instrumentedCode = instrumentPython(code);
+        setExecutionStatus("Executing...");
+        const result = await executePyodide(instrumentedCode);
 
-      // Execute using Pyodide (client-side WebAssembly Python)
-      setExecutionStatus("Executing code...");
-      const result = await executePyodide(instrumentedCode);
-
-      if (result.stderr && !result.stdout.includes("__TRACE__")) {
-        alert("Execution Error: " + result.stderr);
+        if (result.stderr && !result.stdout.includes("__TRACE__")) {
+          alert("Execution Error: " + result.stderr);
+        } else {
+          const trace = parseTrace(result.stdout);
+          setTrace(trace);
+          if (trace.length > 0) {
+            setTimeout(() => { useTraceStore.getState().togglePlay(); }, 100);
+          }
+        }
       } else {
-        const trace = parseTrace(result.stdout);
-        setTrace(trace);
-        if (trace.length > 0) {
-          setTimeout(() => {
-            useTraceStore.getState().togglePlay();
-          }, 100);
+        // C++ / Java: remote execution via Wandbox API
+        setExecutionStatus(`Compiling & running ${language.toUpperCase()}...`);
+        const response = await fetch("/api/execute-remote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code, language }),
+        });
+        const data = await response.json();
+        if (data.error) {
+          alert("Execution Error: " + data.error);
+        } else {
+          setTrace(data.trace);
+          if (data.trace.length > 0) {
+            setTimeout(() => { useTraceStore.getState().togglePlay(); }, 100);
+          }
         }
       }
     } catch (err) {
@@ -351,12 +587,24 @@ export default function Home() {
     }
   };
 
-  const handleExampleChange = (key: string) => {
-    setSelectedExample(key);
-    setCode(EXAMPLES[key].code);
+  const handleLanguageChange = (lang: LangKey) => {
+    setLanguage(lang);
+    const langExamples = EXAMPLES[lang];
+    const firstKey = Object.keys(langExamples)[0];
+    setSelectedExample(firstKey);
+    setCode(langExamples[firstKey].code);
     useTraceStore.getState().reset();
     useTraceStore.getState().setTrace([]);
   };
+
+  const handleExampleChange = (key: string) => {
+    setSelectedExample(key);
+    setCode(EXAMPLES[language][key].code);
+    useTraceStore.getState().reset();
+    useTraceStore.getState().setTrace([]);
+  };
+
+  const currentExamples = EXAMPLES[language];
 
   return (
     <main className="flex flex-col h-screen text-[var(--text-primary)] overflow-hidden">
@@ -371,34 +619,33 @@ export default function Home() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
+          {/* Language tabs */}
+          {(["python", "cpp", "java"] as LangKey[]).map((lang) => (
+            <button
+              key={lang}
+              onClick={() => handleLanguageChange(lang)}
+              className={`px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest neu-base-pill transition-all ${language === lang
+                ? "neu-inset text-[var(--accent-dark)]"
+                : "neu-extruded text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                }`}
+            >
+              {lang === "cpp" ? "C++" : lang.charAt(0).toUpperCase() + lang.slice(1)}
+            </button>
+          ))}
+
+          <div className="w-[1px] h-6 neu-inset mx-1" />
+
+          {/* Dynamic example dropdown */}
           <select
             value={selectedExample}
             onChange={(e) => handleExampleChange(e.target.value)}
             className="neu-inset neu-base-pill px-4 py-2 text-xs font-semibold text-[var(--text-primary)] focus:outline-none cursor-pointer appearance-none transition-all hover:text-[var(--accent-dark)]"
             style={{ minWidth: 180 }}
           >
-            <optgroup label="Search">
-              <option value="binary_search">Binary Search</option>
-              <option value="linear_search">Linear Search</option>
-              <option value="two_pointer">Two Pointer</option>
-              <option value="trapping_rain_water">Trapping Rain Water</option>
-              <option value="median_sorted_arrays">Median Sorted Arrays</option>
-            </optgroup>
-            <optgroup label="Sorting">
-              <option value="bubble_sort">Bubble Sort</option>
-              <option value="selection_sort">Selection Sort</option>
-              <option value="insertion_sort">Insertion Sort</option>
-            </optgroup>
-            <optgroup label="Graph Traversal">
-              <option value="bfs">BFS (Graph)</option>
-              <option value="dfs">DFS (Graph)</option>
-              <option value="dijkstra">Dijkstra</option>
-            </optgroup>
-            <optgroup label="Backtracking">
-              <option value="nqueens">N-Queens</option>
-            </optgroup>
+            {Object.entries(currentExamples).map(([key, ex]) => (
+              <option key={key} value={key}>{ex.label}</option>
+            ))}
           </select>
-          <span className="px-3 py-1.5 neu-extruded neu-base-pill text-[10px] font-bold uppercase tracking-widest text-[var(--text-secondary)]">{language}</span>
         </div>
       </header>
 
@@ -426,7 +673,7 @@ export default function Home() {
 
             {/* Code Editor — takes ~55% of panel height */}
             <div className="flex-[6] min-h-0 overflow-hidden">
-              <CodeEditor code={code} language={language} onChange={(val) => setCode(val || "")} />
+              <CodeEditor code={code} language={language === "cpp" ? "cpp" : language} onChange={(val) => setCode(val || "")} />
             </div>
 
             {/* Divider */}
