@@ -173,7 +173,10 @@ except Exception as e:
     print(f"__ERROR__{str(e)}", file=sys.__stdout__)
 finally:
     sys.settrace(None)
-    sys.stdout = sys.__stdout__
+    try:
+        sys.stdout = sys.__stdout__
+    except Exception:
+        pass
 `;
     return wrapper.trim();
 };

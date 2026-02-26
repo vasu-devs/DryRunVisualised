@@ -9,6 +9,9 @@ import { VariablePanel, StdoutPanel } from "@/components/panels/InfoPanels";
 import { useTraceStore } from "@/lib/store/traceStore";
 import { Visualization2D } from "@/components/visualizer/Visualization2D";
 import { detectVizType } from "@/lib/vizDetector";
+import { instrumentPython } from "@/lib/interpreter/instrumentors/python";
+import { executePyodide } from "@/lib/execution/pyodide";
+import { parseTrace } from "@/lib/interpreter/parsers/traceParser";
 
 // ────────────────────────────────────────────────────────────
 // Algorithm Templates
@@ -301,6 +304,7 @@ export default function Home() {
   const [code, setCode] = useState(EXAMPLES[DEFAULT_EXAMPLE].code);
   const [language] = useState("python");
   const [isExecuting, setIsExecuting] = useState(false);
+  const [executionStatus, setExecutionStatus] = useState("");
   const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const setTrace = useTraceStore((state) => state.setTrace);
@@ -319,18 +323,20 @@ export default function Home() {
     setIsExecuting(true);
     setTrace([]);
     try {
-      const response = await fetch("/api/execute", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, language }),
-      });
+      // Instrument the Python code (pure JS string manipulation)
+      setExecutionStatus("Loading Python engine...");
+      const instrumentedCode = instrumentPython(code);
 
-      const data = await response.json();
-      if (data.error) {
-        alert("Execution Error: " + data.error);
+      // Execute using Pyodide (client-side WebAssembly Python)
+      setExecutionStatus("Executing code...");
+      const result = await executePyodide(instrumentedCode);
+
+      if (result.stderr && !result.stdout.includes("__TRACE__")) {
+        alert("Execution Error: " + result.stderr);
       } else {
-        setTrace(data.trace);
-        if (data.trace.length > 0) {
+        const trace = parseTrace(result.stdout);
+        setTrace(trace);
+        if (trace.length > 0) {
           setTimeout(() => {
             useTraceStore.getState().togglePlay();
           }, 100);
@@ -338,9 +344,10 @@ export default function Home() {
       }
     } catch (err) {
       console.error(err);
-      alert("Failed to connect to execution engine");
+      alert("Execution error: " + (err instanceof Error ? err.message : String(err)));
     } finally {
       setIsExecuting(false);
+      setExecutionStatus("");
     }
   };
 
