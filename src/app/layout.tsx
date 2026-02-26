@@ -15,6 +15,10 @@ const firaCode = Fira_Code({
 export const metadata: Metadata = {
   title: "Dry Runner — 3D DSA Visualizer",
   description: "Visualize data structures and algorithms in 3D. Write code, execute it, and watch the trace come alive.",
+  icons: {
+    icon: "/favicon.png",
+    apple: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
