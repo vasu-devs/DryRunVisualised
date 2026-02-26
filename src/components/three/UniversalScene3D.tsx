@@ -249,16 +249,16 @@ function Bar3D({
     const [hovered, setHovered] = useState(false);
 
     const targetColor = useMemo(() => {
-        if (isChanged) return new THREE.Color("#22c55e");
-        if (isPointed) return new THREE.Color("#00c6a7"); // Cyan accent
+        if (isChanged) return new THREE.Color("#1A202C"); // Dark Accent
+        if (isPointed) return new THREE.Color("#2D3748"); // Primary Text color as secondary accent
         if (hovered) return new THREE.Color("#ffffff"); // Highlight on hover
-        if (color === "rgba(24, 24, 27, 0.5)") return new THREE.Color("#e6e8ec"); // Override old dark default
-        return new THREE.Color("#e6e8ec"); // Force Neumorphic base
+        if (color === "rgba(24, 24, 27, 0.5)") return new THREE.Color("#ECECEC"); // Override old dark default
+        return new THREE.Color("#ECECEC"); // Force Neumorphic base
     }, [isChanged, isPointed, hovered, color]);
 
     const targetEmissive = useMemo(() => {
-        if (isChanged) return new THREE.Color("#16a34a");
-        if (isPointed) return new THREE.Color("#00a388"); // Darker cyan
+        if (isChanged) return new THREE.Color("#1A202C");
+        if (isPointed) return new THREE.Color("#2D3748");
         if (hovered) return new THREE.Color("#f8f9fa");
         return new THREE.Color("#ffffff");
     }, [isChanged, isPointed, hovered]);
@@ -498,13 +498,13 @@ function GridTile3D({
     const [hovered, setHovered] = useState(false);
 
     const targetColor = useMemo(() => {
-        if (isChanged) return new THREE.Color("#22c55e");
-        if (isPointed) return new THREE.Color("#00c6a7"); // Cyan
+        if (isChanged) return new THREE.Color("#1A202C");
+        if (isPointed) return new THREE.Color("#2D3748");
         if (hovered) return new THREE.Color("#ffffff");
         const numVal = typeof value === "number" ? value : 0;
-        if (numVal === 0) return new THREE.Color("#e6e8ec"); // Neumorphic base
-        if (numVal === 1 || value === true) return new THREE.Color("#dbeafe"); // Keep blueish
-        return new THREE.Color("#f1f5f9"); // Lighter hue
+        if (numVal === 0) return new THREE.Color("#ECECEC"); // Neumorphic base
+        if (numVal === 1 || value === true) return new THREE.Color("#cbd5e1"); // Neutral active cell
+        return new THREE.Color("#f1f5f9");
     }, [isChanged, isPointed, hovered, value]);
 
     useFrame((_, delta) => {

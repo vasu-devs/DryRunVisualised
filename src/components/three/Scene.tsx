@@ -2,7 +2,7 @@
 
 import { Suspense, useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, PerspectiveCamera, Grid } from "@react-three/drei";
+import { OrbitControls, PerspectiveCamera } from "@react-three/drei";
 import { useTraceStore } from "@/lib/store/traceStore";
 import { detectVizType, VizType } from "@/lib/vizDetector";
 import { UniversalScene3D } from "./UniversalScene3D";
@@ -105,9 +105,9 @@ function CameraToolbar({
     const btnBase =
         "flex items-center justify-center w-8 h-8 rounded-full text-xs font-semibold transition-all duration-150 select-none";
     const active =
-        "neu-pressed text-[var(--accent-cyan)]";
+        "neu-inset text-[var(--accent-dark)]";
     const inactive =
-        "neu-raised text-slate-500 hover:text-slate-800";
+        "neu-extruded text-[var(--text-secondary)] hover:text-[var(--text-primary)]";
 
     return (
         <div
@@ -115,7 +115,7 @@ function CameraToolbar({
             style={{ pointerEvents: "auto" }}
         >
             {/* Mode Toggle */}
-            <div className="flex items-center neu-pressed p-2 rounded-full gap-2">
+            <div className="flex items-center neu-inset p-2 rounded-full gap-2">
                 <button
                     onClick={() => setMode("pan")}
                     className={`${btnBase} ${mode === "pan" ? active : inactive}`}
@@ -142,7 +142,7 @@ function CameraToolbar({
             </div>
 
             {/* Zoom */}
-            <div className="flex items-center neu-pressed p-2 rounded-full gap-2">
+            <div className="flex items-center neu-inset p-2 rounded-full gap-2">
                 <button
                     onClick={onZoomIn}
                     className={`${btnBase} ${inactive}`}
@@ -277,17 +277,6 @@ export function Scene() {
                         color="#ffffff"
                     />
 
-                    {/* Grid floor */}
-                    <Grid
-                        infiniteGrid
-                        fadeDistance={60}
-                        fadeStrength={1.5}
-                        cellSize={0.6}
-                        sectionSize={3}
-                        sectionColor="#3f3f46"
-                        cellColor="#27272a"
-                        position={[0, -0.01, 0]}
-                    />
 
                     {/* Universal Visualization */}
                     {currentStep && (
@@ -314,7 +303,7 @@ export function Scene() {
             />
 
             {/* Hint text */}
-            <div className="absolute top-4 left-4 z-10 text-[10px] text-slate-500 font-mono pointer-events-none select-none">
+            <div className="absolute top-4 left-4 z-10 text-[11px] text-[var(--text-secondary)] font-mono pointer-events-none select-none">
                 {cameraMode === "pan"
                     ? "LMB: Pan · RMB: Orbit · Scroll: Zoom"
                     : "LMB: Orbit · RMB: Pan · Scroll: Zoom"}

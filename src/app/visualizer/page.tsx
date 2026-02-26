@@ -303,7 +303,6 @@ export default function Home() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [bottomPanelCollapsed, setBottomPanelCollapsed] = useState(false);
   const setTrace = useTraceStore((state) => state.setTrace);
   const trace = useTraceStore((s) => s.trace);
   const currentStep = useTraceStore((s) => {
@@ -318,7 +317,7 @@ export default function Home() {
 
   const handleExecute = async () => {
     setIsExecuting(true);
-    setTrace([]); // Clear old trace immediately to prevent stale vizCtx
+    setTrace([]);
     try {
       const response = await fetch("/api/execute", {
         method: "POST",
@@ -331,7 +330,6 @@ export default function Home() {
         alert("Execution Error: " + data.error);
       } else {
         setTrace(data.trace);
-        // Auto-start animation after execution
         if (data.trace.length > 0) {
           setTimeout(() => {
             useTraceStore.getState().togglePlay();
@@ -354,22 +352,23 @@ export default function Home() {
   };
 
   return (
-    <main className="flex flex-col h-screen bg-cream-50 text-cream-950 overflow-hidden">
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-3 border-b border-cream-200 matte-glass z-10 relative">
+    <main className="flex flex-col h-screen text-[var(--text-primary)] overflow-hidden">
+      {/* ═══════════════════════════════════════════════════════════
+          HEADER — flat, machined into the base material
+          ═══════════════════════════════════════════════════════════ */}
+      <header className="flex items-center justify-between px-6 py-3 z-10 relative shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-[10px] bg-cream-800 shadow-[0_2px_10px_rgba(0,0,0,0.1)] flex items-center justify-center font-bold text-cream-50 text-sm">DR</div>
-          <h1 className="text-lg font-bold tracking-tight text-cream-900">
-            Dry Runner <span className="text-cream-500 font-normal ml-1">3D DSA Visualizer</span>
+          <div className="w-9 h-9 neu-extruded neu-base-pill flex items-center justify-center font-bold text-[var(--accent-dark)] text-xs">DR</div>
+          <h1 className="text-base font-bold tracking-tight text-[var(--text-primary)]">
+            Dry Runner <span className="text-[var(--text-secondary)] font-medium text-sm ml-1">3D DSA Visualizer</span>
           </h1>
         </div>
-        <div className="flex items-center gap-3">
-          {/* Examples dropdown */}
+        <div className="flex items-center gap-2">
           <select
             value={selectedExample}
             onChange={(e) => handleExampleChange(e.target.value)}
-            className="bg-cream-100/50 border border-cream-300 text-cream-800 text-xs px-3 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cream-500 cursor-pointer appearance-none shadow-sm backdrop-blur-sm transition-all hover:bg-cream-100"
-            style={{ minWidth: 160 }}
+            className="neu-inset neu-base-pill px-4 py-2 text-xs font-semibold text-[var(--text-primary)] focus:outline-none cursor-pointer appearance-none transition-all hover:text-[var(--accent-dark)]"
+            style={{ minWidth: 180 }}
           >
             <optgroup label="Search">
               <option value="binary_search">Binary Search</option>
@@ -392,97 +391,137 @@ export default function Home() {
               <option value="nqueens">N-Queens</option>
             </optgroup>
           </select>
-          <span className="px-2 py-1 rounded-md bg-cream-100/80 border border-cream-200 text-[10px] font-bold uppercase tracking-widest text-cream-600 shadow-sm">{language}</span>
+          <span className="px-3 py-1.5 neu-extruded neu-base-pill text-[10px] font-bold uppercase tracking-widest text-[var(--text-secondary)]">{language}</span>
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="flex-1 flex min-h-0">
-        {/* Left Side: Editor + Controls */}
+      {/* Subtle divider — inset line machined into the material */}
+      <div className="h-[1px] mx-6 neu-inset opacity-50" />
+
+      {/* ═══════════════════════════════════════════════════════════
+          BODY — 2-column dashboard
+          ═══════════════════════════════════════════════════════════ */}
+      <div className="flex-1 flex gap-4 p-4 min-h-0">
+
+        {/* ─────────────────────────────────────────────────────────
+            LEFT PANEL — Extruded Control Deck
+            ───────────────────────────────────────────────────────── */}
         {!isFullscreen && (
-          <div className="w-[450px] flex flex-col border-r border-cream-200 bg-cream-50/50 z-10 relative shadow-[4px_0_24px_rgba(0,0,0,0.02)] matte-glass-darker">
-            <Toolbar onExecute={handleExecute} isExecuting={isExecuting} />
-            <div className="flex-1 min-h-0">
+          <div className="w-[400px] shrink-0 neu-extruded neu-base-card flex flex-col overflow-hidden">
+
+            {/* Controls Row */}
+            <div className="shrink-0 px-3 pt-3 pb-2">
+              <Toolbar onExecute={handleExecute} isExecuting={isExecuting} />
+            </div>
+
+            {/* Divider */}
+            <div className="h-[1px] mx-4 neu-inset opacity-40" />
+
+            {/* Code Editor — takes ~55% of panel height */}
+            <div className="flex-[6] min-h-0 overflow-hidden">
               <CodeEditor code={code} language={language} onChange={(val) => setCode(val || "")} />
+            </div>
+
+            {/* Divider */}
+            <div className="h-[1px] mx-4 neu-inset opacity-40" />
+
+            {/* Variables Section — scrollable */}
+            <div className="flex-[2] min-h-0 overflow-auto px-4 py-3 custom-scrollbar">
+              <h3 className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-[0.15em] mb-2">Variables</h3>
+              {currentStep ? (
+                <div className="space-y-1">
+                  {Object.entries(currentStep.stack).map(([name, value]) => (
+                    <div key={name} className="flex items-baseline gap-2 font-mono text-xs py-1">
+                      <span className="text-[var(--accent-dark)] font-bold">{name}</span>
+                      <span className="text-[var(--text-secondary)] opacity-50">=</span>
+                      <span className="text-[var(--text-primary)] truncate">{JSON.stringify(value)}</span>
+                    </div>
+                  ))}
+                  {Object.keys(currentStep.stack).length === 0 && (
+                    <p className="text-[var(--text-secondary)] text-xs italic">No variables in scope</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-[var(--text-secondary)] text-xs italic">Run code to inspect variables</p>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div className="h-[1px] mx-4 neu-inset opacity-40" />
+
+            {/* Console Output Section — scrollable */}
+            <div className="flex-[1.5] min-h-0 overflow-auto px-4 py-3 custom-scrollbar">
+              <h3 className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-[0.15em] mb-2">Console</h3>
+              <pre className="text-xs font-mono text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed">
+                {currentStep?.stdout || "Output will appear here..."}
+              </pre>
             </div>
           </div>
         )}
 
-        {/* Right Side: Visualization */}
-        <div className="flex-1 relative flex flex-col bg-cream-100/30">
-          {/* 2D/3D Toggle */}
-          <div className="flex items-center gap-2 px-4 py-2 border-b border-cream-200 matte-glass z-10 relative">
+        {/* ─────────────────────────────────────────────────────────
+            CENTER STAGE — Inset Viewport Well
+            ───────────────────────────────────────────────────────── */}
+        <div className="flex-1 neu-inset neu-base-card flex flex-col overflow-hidden relative">
+
+          {/* Floating overlay: 2D/3D toggle + metadata */}
+          <div className="flex items-center gap-3 px-5 py-3 z-20 absolute top-0 left-0 right-0">
             <button
               onClick={() => setViewMode("2d")}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-all shadow-sm ${viewMode === "2d"
-                ? "bg-cream-800 text-cream-50"
-                : "bg-cream-100 text-cream-600 hover:bg-cream-200"
+              className={`px-4 py-2 text-xs font-bold neu-base-pill transition-all ${viewMode === "2d"
+                ? "neu-inset text-[var(--accent-dark)]"
+                : "neu-extruded text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                 }`}
             >
               2D View
             </button>
             <button
               onClick={() => setViewMode("3d")}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-all shadow-sm ${viewMode === "3d"
-                ? "bg-cream-800 text-cream-50"
-                : "bg-cream-100 text-cream-600 hover:bg-cream-200"
+              className={`px-4 py-2 text-xs font-bold neu-base-pill transition-all ${viewMode === "3d"
+                ? "neu-inset text-[var(--accent-dark)]"
+                : "neu-extruded text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                 }`}
             >
               3D View
             </button>
-            <span className="ml-2 text-xs text-cream-300">|</span>
-            <span className="text-xs text-cream-500 font-medium">
-              {vizCtx.type !== "none" ? `Detected: ${vizCtx.type}` : "Waiting for code..."}
-              {vizCtx.primaryVar ? ` • primary: ${vizCtx.primaryVar}` : ""}
+
+            <span className="text-xs text-[var(--text-secondary)] font-medium ml-1">
+              {vizCtx.type !== "none" ? `${vizCtx.type}` : ""}
+              {vizCtx.primaryVar ? ` · ${vizCtx.primaryVar}` : ""}
             </span>
+
             <div className="flex-1" />
-            {/* Fullscreen toggle */}
+
             <button
               onClick={() => setIsFullscreen(f => !f)}
-              className="px-2 py-1 text-xs font-medium rounded-md transition-all shadow-sm bg-cream-100 text-cream-600 hover:bg-cream-200"
+              className="px-4 py-2 text-xs font-bold neu-extruded neu-base-pill transition-all text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
             >
               {isFullscreen ? "⊟ Exit" : "⊞ Fullscreen"}
             </button>
           </div>
 
-          {/* Visualization Area */}
-          <div className="flex-1 min-h-0">
+          {/* Visualization Canvas */}
+          <div className="flex-1 min-h-0 pt-14">
             {viewMode === "3d" ? (
               <Scene />
             ) : (
               currentStep ? (
                 <Visualization2D step={currentStep} prevStep={prevStep} vizCtx={vizCtx} isFullscreen={isFullscreen} />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-cream-400 text-sm font-medium">
+                <div className="w-full h-full flex items-center justify-center text-[var(--text-secondary)] text-sm font-medium">
                   Run your code to see the visualization
                 </div>
               )
             )}
           </div>
-          {/* Iteration slider — under visualization for easy access */}
-          <StepSlider />
+
+          {/* Step Slider — inside the well at the bottom */}
+          <div className="shrink-0">
+            <StepSlider />
+          </div>
         </div>
       </div>
-
-      {/* Bottom Panel — Collapsible */}
-      {!isFullscreen && (
-        <div className={`border-t border-cream-200 flex overflow-hidden matte-glass z-20 relative transition-all duration-300 ${bottomPanelCollapsed ? 'h-8' : 'h-48'}`}>
-          {/* Collapse toggle */}
-          <button
-            onClick={() => setBottomPanelCollapsed(c => !c)}
-            className="absolute top-0 left-1/2 -translate-x-1/2 z-30 px-3 py-0.5 text-[10px] font-medium rounded-b-md bg-cream-200/80 text-cream-600 hover:bg-cream-300 transition-all backdrop-blur-sm"
-          >
-            {bottomPanelCollapsed ? '▼ Show Panels' : '▲ Hide Panels'}
-          </button>
-          {!bottomPanelCollapsed && (
-            <>
-              <VariablePanel />
-              <StdoutPanel />
-            </>
-          )}
-        </div>
-      )}
     </main>
   );
 }

@@ -31,16 +31,16 @@ export function VariablePanel() {
     if (!currentStep) return null;
 
     return (
-        <div className="flex-1 min-w-[260px] p-4 overflow-auto neu-pressed mx-1 mb-1">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4">Variables (Stack)</h3>
+        <div className="flex-1 min-w-[260px] p-5 overflow-auto neu-inset neu-base-card mx-2 mb-2 custom-scrollbar">
+            <h3 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-widest mb-4">Variables (Stack)</h3>
             <div className="space-y-2">
                 {Object.entries(currentStep.stack).map(([name, value]) => {
                     const isLinkedList = value !== null && typeof value === "object" && !Array.isArray(value) && (value as Record<string, unknown>).__type__ === "linked_list";
                     return (
-                        <div key={name} className="flex items-baseline gap-2 font-mono text-sm py-2 border-b border-[var(--shadow-dark)]/20 last:border-0">
+                        <div key={name} className="flex items-baseline gap-2 font-mono text-sm py-2 border-b border-[var(--shadow-dark)]/10 last:border-0">
                             <span className={isLinkedList ? "text-brand-pink font-bold" : "text-brand-blue font-bold"}>{name}</span>
-                            <span className="text-slate-400">=</span>
-                            <span className={`truncate ${isLinkedList ? "text-[var(--accent-cyan)] font-medium" : "text-slate-700 font-medium"}`}>
+                            <span className="text-[var(--text-secondary)]">=</span>
+                            <span className={`truncate ${isLinkedList ? "text-[var(--accent-dark)] font-medium" : "text-[var(--text-primary)] font-medium"}`}>
                                 {formatVariableValue(value)}
                             </span>
                         </div>
@@ -58,9 +58,9 @@ export function StdoutPanel() {
     const currentStep = useTraceStore((state) => state.getCurrentStep());
 
     return (
-        <div className="flex-1 p-4 overflow-auto neu-pressed mx-1 mb-1">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4">Console Output</h3>
-            <pre className="text-sm font-mono text-slate-700 whitespace-pre-wrap leading-relaxed">
+        <div className="flex-1 p-5 overflow-auto neu-inset neu-base-card mx-2 mb-2 custom-scrollbar">
+            <h3 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-widest mb-4">Console Output</h3>
+            <pre className="text-sm font-mono text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed">
                 {currentStep?.stdout || "Program output will appear here..."}
             </pre>
         </div>

@@ -17,7 +17,7 @@ export function Toolbar({ onExecute, isExecuting }: ToolbarProps) {
             <button
                 onClick={onExecute}
                 disabled={isExecuting}
-                className="flex items-center gap-2 px-4 py-2 neu-raised text-sm font-bold text-[var(--accent-cyan)] transition-all disabled:opacity-40"
+                className="flex items-center gap-2 px-6 py-2 neu-extruded neu-base-pill text-sm font-bold text-[var(--accent-dark)] transition-all disabled:opacity-40"
             >
                 {isExecuting ? (
                     <>
@@ -32,14 +32,14 @@ export function Toolbar({ onExecute, isExecuting }: ToolbarProps) {
                 )}
             </button>
 
-            <div className="h-6 w-[2px] rounded-full neu-pressed mx-2" />
+            <div className="h-6 w-[2px] rounded-full neu-inset mx-2" />
 
             {/* Step controls — manual stepping */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
                 <button
                     onClick={prevStep}
                     disabled={trace.length === 0}
-                    className="p-2 neu-raised transition-all disabled:opacity-40 text-slate-500 hover:text-slate-800"
+                    className="p-3 neu-extruded neu-base-pill transition-all disabled:opacity-40 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                     title="Step Back"
                 >
                     <SkipBack size={18} />
@@ -48,7 +48,7 @@ export function Toolbar({ onExecute, isExecuting }: ToolbarProps) {
                 <button
                     onClick={nextStep}
                     disabled={trace.length === 0}
-                    className="p-2 neu-raised transition-all disabled:opacity-40 text-slate-500 hover:text-slate-800"
+                    className="p-3 neu-extruded neu-base-pill transition-all disabled:opacity-40 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                     title="Step Forward"
                 >
                     <SkipForward size={18} />
@@ -58,7 +58,7 @@ export function Toolbar({ onExecute, isExecuting }: ToolbarProps) {
             <button
                 onClick={reset}
                 disabled={trace.length === 0}
-                className="p-2 neu-raised transition-all ml-auto disabled:opacity-40 text-slate-500 hover:text-slate-800"
+                className="p-3 neu-extruded neu-base-pill transition-all ml-auto disabled:opacity-40 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                 title="Reset"
             >
                 <RotateCcw size={18} />

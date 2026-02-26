@@ -19,27 +19,22 @@
 }
 
 :root {
-  --bg-neu: #e2e2e2;
-  --text-main: #333333;
-  --accent-cyan: #111111;
-  /* Changed to dark near-black for the monotonic look */
-  --shadow-dark: #bebebe;
-  --shadow-light: #ffffff;
+  /* Strict Material Rule — Neutral Light Grey */
+  --bg-neu: #ECECEC;
+
+  /* Text & Accent Hierarchy */
+  --text-primary: #333333;
+  --text-secondary: #8C8C8C;
+  --accent-dark: #222222;
+
+  /* Shadow Engine Colors — Pure neutral */
+  --shadow-dark: #CACACA;
+  /* Neutral grey for bottom-right */
+  --shadow-light: #FFFFFF;
+  /* Pure white for top-left highlight */
 
   --background: var(--bg-neu);
-  --foreground: var(--text-main);
-
-  /* Shared standard tokens */
-  --blue-600: #2563eb;
-  --blue-500: #3b82f6;
-  --slate-950: #020617;
-  --slate-900: #0f172a;
-  --slate-800: #1e293b;
-  --slate-700: #334155;
-  --slate-600: #475569;
-  --slate-500: #64748b;
-  --slate-400: #94a3b8;
-  --slate-300: #cbd5e1;
+  --foreground: var(--text-primary);
 }
 
 body {
@@ -56,59 +51,48 @@ body {
    Neumorphic (Soft UI) Utilities
    ───────────────────────────────────────────────────────────────── */
 
-.neu-raised {
+/* ─────────────────────────────────────────────────────────────────
+   Strict Dual-Shadow Engine (Neumorphism)
+   ───────────────────────────────────────────────────────────────── */
+
+/* Extruded (Raised): Used for panels, unpressed buttons, and code editor */
+.neu-extruded {
   background-color: var(--bg-neu);
   box-shadow:
-    5px 5px 12px var(--shadow-dark),
-    -5px -5px 12px var(--shadow-light);
-  border-radius: 20px;
-  color: var(--text-main);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+    6px 6px 16px var(--shadow-dark),
+    -6px -6px 16px var(--shadow-light);
+  color: var(--text-primary);
+  /* No solid borders - let the shadows define the edges */
+  border: none;
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.neu-raised:active.clickable,
-button.neu-raised:active,
-.neu-raised-pressed {
-  box-shadow:
-    inset 3px 3px 8px var(--shadow-dark),
-    inset -3px -3px 8px var(--shadow-light);
-  border: 1px solid transparent;
-}
-
-.neu-pressed {
+/* Inset (Sunken): Used for main Canvas, inputs, tracks, pressed states */
+.neu-inset {
   background-color: var(--bg-neu);
+  box-shadow:
+    inset 5px 5px 12px var(--shadow-dark),
+    inset -5px -5px 12px var(--shadow-light);
+  color: var(--text-primary);
+  border: none;
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Interactive elements default to extruded, swap to inset on press */
+button.neu-extruded:active,
+.neu-extruded:active.clickable,
+.neu-extruded-pressed {
   box-shadow:
     inset 4px 4px 10px var(--shadow-dark),
     inset -4px -4px 10px var(--shadow-light);
-  border-radius: 20px;
-  color: var(--text-main);
-  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.neu-convex {
-  background: linear-gradient(145deg, #f2f2f2, #cccccc);
-  box-shadow:
-    4px 4px 10px var(--shadow-dark),
-    -4px -4px 10px var(--shadow-light);
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  transition: all 0.2s ease;
+/* Base geometry wrappers - to be used with Tailwind rounded utility if needed */
+.neu-base-card {
+  border-radius: 24px;
 }
 
-.neu-concave {
-  background: linear-gradient(145deg, #cccccc, #f2f2f2);
-  box-shadow:
-    inset 4px 4px 10px var(--shadow-dark),
-    inset -4px -4px 10px var(--shadow-light);
-  border-radius: 50%;
-}
-
-.neu-slider-track {
-  background-color: var(--bg-neu);
-  box-shadow:
-    inset 4px 4px 8px var(--shadow-dark),
-    inset -4px -4px 8px var(--shadow-light);
+.neu-base-pill {
   border-radius: 9999px;
 }
 
