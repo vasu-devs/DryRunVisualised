@@ -609,22 +609,31 @@ export default function Home() {
   return (
     <main className="flex flex-col h-screen text-[var(--text-primary)] overflow-hidden">
       {/* ═══════════════════════════════════════════════════════════
-          HEADER — flat, machined into the base material
+          HEADER — Premium branding bar
           ═══════════════════════════════════════════════════════════ */}
       <header className="flex items-center justify-between px-6 py-3 z-10 relative shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 neu-extruded neu-base-pill flex items-center justify-center font-bold text-[var(--accent-dark)] text-xs">DR</div>
-          <h1 className="text-base font-bold tracking-tight text-[var(--text-primary)]">
-            Dry Runner <span className="text-[var(--text-secondary)] font-medium text-sm ml-1">3D DSA Visualizer</span>
-          </h1>
+          {/* Logo — uses actual favicon image */}
+          <div className="w-10 h-10 neu-extruded rounded-2xl flex items-center justify-center overflow-hidden p-1.5">
+            <img src="/favicon.png" alt="Dry Runner" className="w-full h-full object-contain" />
+          </div>
+          <div className="flex flex-col">
+            <h1 className="text-[15px] font-semibold tracking-[-0.01em] text-[var(--text-primary)] leading-tight font-[var(--font-sans)]">
+              Dry Runner
+            </h1>
+            <span className="text-[10px] font-medium text-[var(--text-secondary)] tracking-[0.05em] uppercase leading-tight">
+              3D Visualizer
+            </span>
+          </div>
         </div>
+
         <div className="flex items-center gap-2">
           {/* Language tabs */}
           {(["python", "cpp", "java"] as LangKey[]).map((lang) => (
             <button
               key={lang}
               onClick={() => handleLanguageChange(lang)}
-              className={`px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest neu-base-pill transition-all ${language === lang
+              className={`px-5 py-2 text-[11px] font-bold uppercase tracking-[0.12em] neu-base-pill transition-all ${language === lang
                 ? "neu-inset text-[var(--accent-dark)]"
                 : "neu-extruded text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                 }`}
@@ -633,14 +642,14 @@ export default function Home() {
             </button>
           ))}
 
-          <div className="w-[1px] h-6 neu-inset mx-1" />
+          <div className="w-[1px] h-7 rounded-full neu-inset mx-2 opacity-40" />
 
-          {/* Dynamic example dropdown */}
+          {/* Algorithm dropdown — custom styled */}
           <select
             value={selectedExample}
             onChange={(e) => handleExampleChange(e.target.value)}
-            className="neu-inset neu-base-pill px-4 py-2 text-xs font-semibold text-[var(--text-primary)] focus:outline-none cursor-pointer appearance-none transition-all hover:text-[var(--accent-dark)]"
-            style={{ minWidth: 180 }}
+            className="neu-inset neu-base-pill neu-select px-5 py-2.5 text-xs font-semibold text-[var(--text-primary)] focus:outline-none cursor-pointer appearance-none transition-all hover:text-[var(--accent-dark)]"
+            style={{ minWidth: 200 }}
           >
             {Object.entries(currentExamples).map(([key, ex]) => (
               <option key={key} value={key}>{ex.label}</option>
@@ -649,8 +658,8 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Subtle divider — inset line machined into the material */}
-      <div className="h-[1px] mx-6 neu-inset opacity-50" />
+      {/* Gradient divider */}
+      <div className="neu-divider mx-6" />
 
       {/* ═══════════════════════════════════════════════════════════
           BODY — 2-column dashboard
@@ -661,15 +670,15 @@ export default function Home() {
             LEFT PANEL — Extruded Control Deck
             ───────────────────────────────────────────────────────── */}
         {!isFullscreen && (
-          <div className="w-[400px] shrink-0 neu-extruded neu-base-card flex flex-col overflow-hidden">
+          <div className="w-[420px] shrink-0 neu-extruded neu-base-card flex flex-col overflow-hidden">
 
             {/* Controls Row */}
-            <div className="shrink-0 px-3 pt-3 pb-2">
+            <div className="shrink-0 px-4 pt-4 pb-3">
               <Toolbar onExecute={handleExecute} isExecuting={isExecuting} />
             </div>
 
             {/* Divider */}
-            <div className="h-[1px] mx-4 neu-inset opacity-40" />
+            <div className="neu-divider mx-5" />
 
             {/* Code Editor — takes ~55% of panel height */}
             <div className="flex-[6] min-h-0 overflow-hidden">
@@ -677,17 +686,17 @@ export default function Home() {
             </div>
 
             {/* Divider */}
-            <div className="h-[1px] mx-4 neu-inset opacity-40" />
+            <div className="neu-divider mx-5" />
 
-            {/* Variables Section — scrollable */}
-            <div className="flex-[2] min-h-0 overflow-auto px-4 py-3 custom-scrollbar">
-              <h3 className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-[0.15em] mb-2">Variables</h3>
+            {/* Variables Section */}
+            <div className="flex-[2] min-h-0 overflow-auto px-5 py-3 custom-scrollbar">
+              <h3 className="section-label mb-2.5">Variables</h3>
               {currentStep ? (
                 <div className="space-y-1">
                   {Object.entries(currentStep.stack).map(([name, value]) => (
-                    <div key={name} className="flex items-baseline gap-2 font-mono text-xs py-1">
-                      <span className="text-[var(--accent-dark)] font-bold">{name}</span>
-                      <span className="text-[var(--text-secondary)] opacity-50">=</span>
+                    <div key={name} className="flex items-baseline gap-2.5 font-mono text-xs py-1">
+                      <span className="text-[var(--accent-dark)] font-bold min-w-[48px]">{name}</span>
+                      <span className="text-[var(--text-secondary)] opacity-40">=</span>
                       <span className="text-[var(--text-primary)] truncate">{JSON.stringify(value)}</span>
                     </div>
                   ))}
@@ -701,13 +710,13 @@ export default function Home() {
             </div>
 
             {/* Divider */}
-            <div className="h-[1px] mx-4 neu-inset opacity-40" />
+            <div className="neu-divider mx-5" />
 
-            {/* Console Output Section — scrollable */}
-            <div className="flex-[1.5] min-h-0 overflow-auto px-4 py-3 custom-scrollbar">
-              <h3 className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-[0.15em] mb-2">Console</h3>
+            {/* Console Output Section */}
+            <div className="flex-[1.5] min-h-0 overflow-auto px-5 py-3 custom-scrollbar">
+              <h3 className="section-label mb-2.5">Console</h3>
               <pre className="text-xs font-mono text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed">
-                {currentStep?.stdout || "Output will appear here..."}
+                {currentStep?.stdout || <span className="text-[var(--text-secondary)] italic">Output will appear here...</span>}
               </pre>
             </div>
           </div>
@@ -720,26 +729,28 @@ export default function Home() {
 
           {/* Floating overlay: 2D/3D toggle + metadata */}
           <div className="flex items-center gap-3 px-5 py-3 z-20 absolute top-0 left-0 right-0">
-            <button
-              onClick={() => setViewMode("2d")}
-              className={`px-4 py-2 text-xs font-bold neu-base-pill transition-all ${viewMode === "2d"
-                ? "neu-inset text-[var(--accent-dark)]"
-                : "neu-extruded text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                }`}
-            >
-              2D View
-            </button>
-            <button
-              onClick={() => setViewMode("3d")}
-              className={`px-4 py-2 text-xs font-bold neu-base-pill transition-all ${viewMode === "3d"
-                ? "neu-inset text-[var(--accent-dark)]"
-                : "neu-extruded text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                }`}
-            >
-              3D View
-            </button>
+            <div className="flex items-center gap-1.5 p-1 neu-extruded rounded-full">
+              <button
+                onClick={() => setViewMode("2d")}
+                className={`px-4 py-1.5 text-xs font-bold rounded-full transition-all ${viewMode === "2d"
+                  ? "neu-inset text-[var(--accent-dark)]"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  }`}
+              >
+                2D
+              </button>
+              <button
+                onClick={() => setViewMode("3d")}
+                className={`px-4 py-1.5 text-xs font-bold rounded-full transition-all ${viewMode === "3d"
+                  ? "neu-inset text-[var(--accent-dark)]"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  }`}
+              >
+                3D
+              </button>
+            </div>
 
-            <span className="text-xs text-[var(--text-secondary)] font-medium ml-1">
+            <span className="text-[11px] text-[var(--text-secondary)] font-medium tracking-wide">
               {vizCtx.type !== "none" ? `${vizCtx.type}` : ""}
               {vizCtx.primaryVar ? ` · ${vizCtx.primaryVar}` : ""}
             </span>
@@ -751,7 +762,7 @@ export default function Home() {
               className="px-4 py-2 text-xs font-bold neu-extruded neu-base-pill transition-all text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
             >
-              {isFullscreen ? "⊟ Exit" : "⊞ Fullscreen"}
+              {isFullscreen ? "⊟ Exit" : "⊞ Expand"}
             </button>
           </div>
 
@@ -763,8 +774,15 @@ export default function Home() {
               currentStep ? (
                 <Visualization2D step={currentStep} prevStep={prevStep} vizCtx={vizCtx} isFullscreen={isFullscreen} />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-[var(--text-secondary)] text-sm font-medium">
-                  Run your code to see the visualization
+                <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-[var(--text-secondary)]">
+                  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-30">
+                    <path d="M8 12h32M8 24h32M8 36h32" />
+                    <circle cx="20" cy="12" r="3" />
+                    <circle cx="28" cy="24" r="3" />
+                    <circle cx="16" cy="36" r="3" />
+                  </svg>
+                  <span className="text-sm font-medium">Run your code to see the visualization</span>
+                  <span className="text-xs opacity-60">Write an algorithm → click Run & Visualize</span>
                 </div>
               )
             )}

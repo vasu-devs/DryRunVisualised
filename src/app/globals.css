@@ -135,18 +135,63 @@ input[type="range"] {
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
-  background: var(--color-brand-red);
+  width: 18px;
+  height: 18px;
+  background: var(--bg-neu);
   border-radius: 50%;
   cursor: pointer;
-  margin-top: -6px;
+  margin-top: -7px;
+  box-shadow:
+    2px 2px 5px var(--shadow-dark),
+    -2px -2px 5px var(--shadow-light);
+  border: 2px solid var(--accent-dark);
+  transition: transform 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
 }
 
 input[type="range"]::-webkit-slider-runnable-track {
   width: 100%;
-  height: 3px;
+  height: 4px;
   cursor: pointer;
-  background: rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.12);
   border-radius: 2px;
+}
+
+/* ─── Flat surface (subtle, no strong depth) ──────────────────── */
+.neu-flat {
+  background-color: var(--bg-neu);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: none;
+}
+
+/* ─── Consistent Divider ──────────────────────────────────────── */
+.neu-divider {
+  height: 1px;
+  background: linear-gradient(90deg,
+      transparent,
+      var(--shadow-dark) 25%,
+      var(--shadow-dark) 75%,
+      transparent);
+  opacity: 0.3;
+}
+
+/* ─── Custom Select Arrow ─────────────────────────────────────── */
+select.neu-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238C8C8C' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+
+/* ─── Section Label Styling ───────────────────────────────────── */
+.section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
 }

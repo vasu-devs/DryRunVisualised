@@ -54,16 +54,37 @@ function CameraRig({
         }
     }, [resetKey]);
 
-    // ── Custom touch gesture handler ──
-    // OrbitControls' built-in touch is limited, so we handle it ourselves:
-    // - Pinch (finger distance change) → zoom (dolly)
-    // - Two-finger drag (center movement) → orbit (rotate camera)
+    // ── Custom gesture handler for trackpad + touchscreen ──
+    // Trackpad: browser sends wheel events:
+    //   - ctrlKey = true → pinch gesture → let OrbitControls handle zoom natively
+    //   - ctrlKey = false → two-finger scroll → intercept and orbit the camera
+    // Touchscreen: raw touch events:
+    //   - finger distance change → zoom
+    //   - center movement → orbit
     useEffect(() => {
         const controls = controlsRef.current;
         if (!controls) return;
         const domElement = controls.domElement as HTMLCanvasElement;
         if (!domElement) return;
 
+        // ── Trackpad wheel handler ──
+        // Only intercept non-pinch (non-ctrlKey) scroll to orbit.
+        // Pinch (ctrlKey) is left for OrbitControls' native zoom.
+        const onWheel = (e: WheelEvent) => {
+            if (e.ctrlKey || e.metaKey) {
+                // Pinch gesture — let it through to OrbitControls for zoom
+                return;
+            }
+            // Two-finger scroll → orbit (rotate the camera viewpoint)
+            e.preventDefault();
+            e.stopPropagation();
+            const rotateSpeed = 0.003;
+            controls.rotateLeft(e.deltaX * rotateSpeed);
+            controls.rotateUp(e.deltaY * rotateSpeed);
+            controls.update();
+        };
+
+        // ── Touchscreen gesture handler ──
         let prevTouchDist = 0;
         let prevTouchCenter = { x: 0, y: 0 };
 
@@ -93,7 +114,7 @@ function CameraRig({
 
             const info = getTouchInfo(e.touches);
 
-            // ── Pinch-to-zoom ──
+            // Pinch-to-zoom
             const distDelta = info.dist - prevTouchDist;
             if (Math.abs(distDelta) > 1) {
                 const zoomFactor = 1 - distDelta * 0.005;
@@ -101,21 +122,18 @@ function CameraRig({
                 const offset = new THREE.Vector3().copy(camera.position).sub(controls.target);
                 offset.multiplyScalar(zoomFactor);
                 const newDist = offset.length();
-                // Clamp to min/max distance
                 if (newDist >= 2 && newDist <= 150) {
                     camera.position.copy(controls.target).add(offset);
                     controls.update();
                 }
             }
 
-            // ── Two-finger drag to orbit ──
+            // Two-finger drag → orbit
             const centerDx = info.center.x - prevTouchCenter.x;
             const centerDy = info.center.y - prevTouchCenter.y;
             if (Math.abs(centerDx) > 0.5 || Math.abs(centerDy) > 0.5) {
                 const rotateSpeed = 0.004;
-                // Horizontal drag → azimuthal rotation (left/right)
                 controls.rotateLeft(centerDx * rotateSpeed);
-                // Vertical drag → polar rotation (up/down)
                 controls.rotateUp(centerDy * rotateSpeed);
                 controls.update();
             }
@@ -124,10 +142,13 @@ function CameraRig({
             prevTouchCenter = info.center;
         };
 
+        // Use capture phase for wheel to intercept before OrbitControls
+        domElement.addEventListener("wheel", onWheel, { passive: false, capture: true });
         domElement.addEventListener("touchstart", onTouchStart, { passive: false });
         domElement.addEventListener("touchmove", onTouchMove, { passive: false });
 
         return () => {
+            domElement.removeEventListener("wheel", onWheel, { capture: true });
             domElement.removeEventListener("touchstart", onTouchStart);
             domElement.removeEventListener("touchmove", onTouchMove);
         };
@@ -141,20 +162,20 @@ function CameraRig({
             mouseButtons={mouseButtons}
             touches={{
                 ONE: mode === "pan" ? THREE.TOUCH.PAN : THREE.TOUCH.ROTATE,
-                TWO: -1 as unknown as THREE.TOUCH, // Disable built-in two-finger (we handle it)
+                TWO: -1 as unknown as THREE.TOUCH, // Disabled — we handle it ourselves
             }}
             enableDamping
             dampingFactor={0.08}
             rotateSpeed={0.5}
             panSpeed={0.8}
+            enableZoom={true}
             zoomSpeed={1.2}
+            zoomToCursor={true}
             minDistance={2}
             maxDistance={150}
             maxPolarAngle={Math.PI / 2 - 0.05}
             minPolarAngle={0.1}
             autoRotate={false}
-            enableZoom={true}
-            zoomToCursor={true}
         />
     );
 }
@@ -190,9 +211,8 @@ function CameraToolbar({
                 <button
                     onClick={() => setMode("pan")}
                     className={`${btnBase} ${mode === "pan" ? active : inactive}`}
-                    title="Pan mode — drag to move (Left click / 1 finger)"
+                    title="Pan mode (Left click / 1 finger)"
                 >
-                    {/* Move/pan icon */}
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M8 2v12M2 8h12M8 2l-2 2M8 2l2 2M8 14l-2-2M8 14l2-2M2 8l2-2M2 8l2 2M14 8l-2-2M14 8l-2 2" />
                     </svg>
@@ -200,9 +220,8 @@ function CameraToolbar({
                 <button
                     onClick={() => setMode("orbit")}
                     className={`${btnBase} ${mode === "orbit" ? active : inactive}`}
-                    title="Orbit mode — drag to rotate (Left click / 1 finger)"
+                    title="Orbit mode (Left click / 1 finger)"
                 >
-                    {/* Orbit/rotate icon */}
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                         <path d="M13.5 8a5.5 5.5 0 0 1-8.78 4.4" />
                         <path d="M2.5 8a5.5 5.5 0 0 1 8.78-4.4" />
@@ -278,15 +297,16 @@ export function Scene() {
     // Track WebGL context loss to allow recovery
     const [contextLost, setContextLost] = useState(false);
 
-    // Zoom via canvas — dispatch synthetic wheel events on the canvas
+    // Zoom via toolbar buttons — dispatch synthetic wheel events
     const canvasContainerRef = useRef<HTMLDivElement>(null);
 
     const handleZoom = useCallback((direction: "in" | "out") => {
         const canvas = canvasContainerRef.current?.querySelector("canvas");
         if (!canvas) return;
         const delta = direction === "in" ? -300 : 300;
+        // Use ctrlKey so our custom handler lets it pass through to OrbitControls
         canvas.dispatchEvent(
-            new WheelEvent("wheel", { deltaY: delta, bubbles: true })
+            new WheelEvent("wheel", { deltaY: delta, ctrlKey: true, bubbles: true })
         );
     }, []);
 
@@ -386,11 +406,11 @@ export function Scene() {
                 onZoomOut={() => handleZoom("out")}
             />
 
-            {/* Hint text — desktop + touch */}
+            {/* Hint text — desktop + trackpad + touch */}
             <div className="absolute top-4 left-4 z-10 text-[11px] text-[var(--text-secondary)] font-mono pointer-events-none select-none">
                 {cameraMode === "pan"
-                    ? "LMB: Pan · RMB: Orbit · Scroll: Zoom · Touch: 1F Pan · 2F Rotate+Zoom"
-                    : "LMB: Orbit · RMB: Pan · Scroll: Zoom · Touch: 1F Orbit · 2F Rotate+Zoom"}
+                    ? "LMB: Pan · RMB: Orbit · Trackpad: 2F Orbit · Pinch: Zoom"
+                    : "LMB: Orbit · RMB: Pan · Trackpad: 2F Orbit · Pinch: Zoom"}
             </div>
         </div>
     );

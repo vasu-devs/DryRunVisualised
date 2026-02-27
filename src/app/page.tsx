@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 
 export default function LandingPage() {
@@ -10,9 +9,17 @@ export default function LandingPage() {
 
             {/* Top Bar (Minimalist) */}
             <nav className="absolute top-8 left-8 right-8 flex justify-between items-center z-50">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 neu-extruded neu-base-pill flex items-center justify-center overflow-hidden">
-                        <Image src="/logo.png" alt="Logo" width={32} height={32} className="rounded-full" />
+                <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 neu-extruded rounded-2xl flex items-center justify-center overflow-hidden p-2">
+                        <img src="/favicon.png" alt="Dry Runner" className="w-full h-full object-contain" />
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="text-sm font-semibold tracking-[-0.01em] text-[var(--text-primary)] leading-tight">
+                            Dry Runner
+                        </span>
+                        <span className="text-[9px] font-medium text-[var(--text-secondary)] tracking-[0.05em] uppercase leading-tight">
+                            3D Visualizer
+                        </span>
                     </div>
                 </div>
                 <div className="flex gap-6">

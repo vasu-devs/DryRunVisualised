@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useEffect, useState, useCallback } from "react";
+import { useMemo, useRef } from "react";
 import { TraceStep } from "@/lib/interpreter/schema";
 import { VizContext } from "@/lib/vizDetector";
 import { useGraphLayout } from "@/hooks/useGraphLayout";
@@ -495,8 +495,8 @@ function GraphView2D({
     const queueSet = new Set((queue || []).map(String));
     const currentStr = current !== undefined ? String(current) : null;
 
-    // Use shared layout engine
-    const { layout, edges, nodes: nodeIds } = useGraphLayout(adj, 60, 200);
+    // Use shared layout engine — spacing=80 gives nodes room, size=200 for overall spread
+    const { layout, edges, nodes: nodeIds } = useGraphLayout(adj, 80, 250);
 
     // Compute bounding box based on shared layout
     const bounds = useMemo(() => {
@@ -507,7 +507,7 @@ function GraphView2D({
         });
         // Handle empty graph gracefully
         if (minX === Infinity) return { x: 0, y: 0, w: 100, h: 100 };
-        const padding = 50;
+        const padding = 30;
         return {
             x: minX - padding, y: minY - padding,
             w: maxX - minX + padding * 2, h: maxY - minY + padding * 2,
@@ -522,7 +522,7 @@ function GraphView2D({
         return { x: cx / count, y: cy / count };
     }, [layout]);
 
-    const NODE_R = 18;
+    const NODE_R = 12;
 
     const getEdgePath = (fromPos: { x: number; y: number }, toPos: { x: number; y: number }): string => {
         const dx = toPos.x - fromPos.x;
@@ -565,9 +565,8 @@ function GraphView2D({
                 viewBox={`${bounds.x} ${bounds.y} ${bounds.w} ${bounds.h}`}
                 style={{
                     width: "100%",
-                    maxWidth: 420,
                     height: "auto",
-                    maxHeight: 320,
+                    maxHeight: 280,
                     marginTop: 6,
                     display: "block",
                     overflow: "visible",
@@ -599,8 +598,8 @@ function GraphView2D({
                     let strokeWidth = 2;
                     let filter = "none";
 
-                    // A simple drop shadow for SVG nodes to mimic Neumorphism
-                    const dropShadow = "drop-shadow(3px 3px 4px var(--shadow-dark)) drop-shadow(-3px -3px 4px var(--shadow-light))";
+                    // Subtle drop shadow for SVG nodes
+                    const dropShadow = "drop-shadow(2px 2px 3px var(--shadow-dark)) drop-shadow(-2px -2px 3px var(--shadow-light))";
 
                     if (id === currentStr) { fill = "var(--bg-neu)"; stroke = "#db2777"; strokeWidth = 3; filter = dropShadow; }
                     else if (visitedSet.has(id)) { fill = "var(--bg-neu)"; stroke = "#22c55e"; strokeWidth = 3; filter = dropShadow; }
@@ -612,7 +611,7 @@ function GraphView2D({
                             <circle cx={pos.x} cy={pos.y} r={NODE_R} fill={fill} stroke={stroke} strokeWidth={strokeWidth} style={{ filter }} />
                             <text
                                 x={pos.x} y={pos.y} textAnchor="middle" dominantBaseline="central"
-                                fill={COLORS.text} fontSize={12} fontFamily="monospace" fontWeight={700}
+                                fill={COLORS.text} fontSize={10} fontFamily="monospace" fontWeight={700}
                             >
                                 {id}
                             </text>
@@ -946,31 +945,7 @@ function getPointerColor(idx: number): string {
 export function Visualization2D({ step, prevStep, vizCtx, isFullscreen = false }: Visualization2DProps) {
     const sortedVars = useMemo(() => getSortedVariables(step, vizCtx), [step, vizCtx]);
 
-    // ─── Auto-scale to fit viewport in fullscreen mode ───
     const containerRef = useRef<HTMLDivElement>(null);
-    const contentRef = useRef<HTMLDivElement>(null);
-    const [scale, setScale] = useState(1);
-
-    const computeScale = useCallback(() => {
-        if (!isFullscreen || !containerRef.current || !contentRef.current) {
-            setScale(1);
-            return;
-        }
-        const containerH = containerRef.current.clientHeight;
-        const contentH = contentRef.current.scrollHeight;
-        if (contentH > containerH && containerH > 0) {
-            setScale(Math.max(0.4, containerH / contentH));
-        } else {
-            setScale(1);
-        }
-    }, [isFullscreen]);
-
-    useEffect(() => {
-        computeScale();
-        // Re-compute on window resize
-        window.addEventListener('resize', computeScale);
-        return () => window.removeEventListener('resize', computeScale);
-    }, [computeScale, step]);
 
     // Build pointer map for the primary array
     const pointerMap = useMemo(() => {
@@ -1025,282 +1000,241 @@ export function Visualization2D({ step, prevStep, vizCtx, isFullscreen = false }
         }
     }
 
+    // Determine if we have right-column content (graphs, dicts, structured graphs)
+    const hasRightColumn = dicts.length > 0 || adjLists.length > 0 || structuredGraphs.length > 0;
+
+    const sectionHeaderStyle = {
+        fontSize: 10,
+        color: COLORS.textMuted,
+        textTransform: "uppercase" as const,
+        letterSpacing: "1px",
+        marginBottom: 6,
+        fontWeight: 600,
+    };
+
     return (
         <div ref={containerRef} style={{
             width: "100%",
             height: "100%",
-            overflow: isFullscreen ? "hidden" : "auto",
+            overflow: "hidden",
             background: COLORS.bg,
             fontFamily: "'Inter', system-ui, sans-serif",
+            display: "flex",
+            flexDirection: "column",
         }}>
-            <div ref={contentRef} style={{
-                padding: isFullscreen ? 12 : 20,
+            {/* ─── Top Bar: Step info ─── */}
+            <div style={{
                 display: "flex",
-                flexDirection: "column",
-                gap: isFullscreen ? 8 : 16,
-                transform: isFullscreen && scale < 1 ? `scale(${scale})` : undefined,
-                transformOrigin: "top left",
-                width: isFullscreen && scale < 1 ? `${100 / scale}%` : "100%",
+                alignItems: "center",
+                gap: 12,
+                padding: "10px 16px",
+                borderBottom: `1px solid rgba(0,0,0,0.06)`,
+                flexShrink: 0,
             }}>
-                {/* Step Header */}
-                <div style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    paddingBottom: 8,
-                    borderBottom: `1px solid ${COLORS.cardBorder}`,
-                }}>
-                    <span style={{
-                        fontSize: 11,
-                        color: COLORS.textMuted,
-                        fontFamily: "monospace",
-                    }}>
-                        Line {step.line}
-                    </span>
-                    <div style={{ flex: 1 }} />
-                    <span style={{
-                        fontSize: 10,
-                        color: COLORS.textMuted,
-                    }}>
-                        {Object.keys(step.stack).length} variables in scope
-                    </span>
-                </div>
+                <span style={{ fontSize: 11, color: COLORS.textMuted, fontFamily: "monospace" }}>
+                    Line {step.line}
+                </span>
+                <div style={{ flex: 1 }} />
+                <span style={{ fontSize: 10, color: COLORS.textMuted }}>
+                    {Object.keys(step.stack).length} variables in scope
+                </span>
+            </div>
 
-                {/* Scalar Variables — shown first as badges */}
-                {scalars.length > 0 && (
-                    <div>
-                        <div style={{
-                            fontSize: 10,
-                            color: COLORS.textMuted,
-                            textTransform: "uppercase",
-                            letterSpacing: "1px",
-                            marginBottom: 6,
-                            fontWeight: 600,
-                        }}>
-                            Variables
+            {/* ─── Two-Column Body ─── */}
+            <div style={{
+                flex: 1,
+                display: "flex",
+                minHeight: 0,
+                overflow: "hidden",
+            }}>
+
+                {/* ═══════ LEFT COLUMN ═══════ */}
+                <div style={{
+                    flex: hasRightColumn ? "1 1 50%" : "1 1 100%",
+                    minWidth: 0,
+                    overflow: "auto",
+                    padding: 16,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 14,
+                }}>
+
+                    {/* Scalar Variables */}
+                    {scalars.length > 0 && (
+                        <div>
+                            <div style={sectionHeaderStyle}>
+                                Variables
+                            </div>
+                            <div style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: 6,
+                            }}>
+                                {scalars.map(s => (
+                                    <ScalarBadge
+                                        key={s.name}
+                                        name={s.name}
+                                        value={s.value}
+                                        prevValue={prevStep?.stack[s.name]}
+                                        isPointer={vizCtx.pointerVars.includes(s.name)}
+                                    />
+                                ))}
+                            </div>
                         </div>
-                        <div style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: 6,
-                        }}>
-                            {scalars.map(s => (
-                                <ScalarBadge
-                                    key={s.name}
-                                    name={s.name}
-                                    value={s.value}
-                                    prevValue={prevStep?.stack[s.name]}
-                                    isPointer={vizCtx.pointerVars.includes(s.name)}
+                    )}
+
+                    {/* Bitmask Visualization — auto-detected */}
+                    <BitMaskPanel
+                        scalars={scalars}
+                        stack={step.stack}
+                        prevStack={prevStep?.stack}
+                    />
+
+                    {/* Arrays */}
+                    {arrays.length > 0 && (
+                        <div>
+                            <div style={sectionHeaderStyle}>Data Structures</div>
+                            {arrays.map(arr => {
+                                const isPrimary = arr.name === vizCtx.primaryVar;
+                                const prevArr = prevStep?.stack[arr.name] as unknown[] | undefined;
+                                // Only show pointers for the primary array
+                                const arrPointers = isPrimary ? pointerMap : [];
+                                return (
+                                    <ArrayRow
+                                        key={arr.name}
+                                        name={arr.name}
+                                        data={arr.value}
+                                        prevData={prevArr}
+                                        pointers={arrPointers}
+                                        isPrimary={isPrimary}
+                                    />
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Linked Lists */}
+                    {linkedLists.length > 0 && (
+                        <div>
+                            <div style={sectionHeaderStyle}>Linked Lists</div>
+                            {linkedLists.map(ll => (
+                                <LinkedListView2D
+                                    key={ll.name}
+                                    name={ll.name}
+                                    values={ll.values}
                                 />
                             ))}
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {/* Bitmask Visualization — auto-detected */}
-                <BitMaskPanel
-                    scalars={scalars}
-                    stack={step.stack}
-                    prevStack={prevStep?.stack}
-                />
-
-                {/* Arrays — rendered as cell rows */}
-                {arrays.length > 0 && (
-                    <div>
+                    {/* Stdout */}
+                    {step.stdout && (
                         <div style={{
-                            fontSize: 10,
-                            color: COLORS.textMuted,
-                            textTransform: "uppercase",
-                            letterSpacing: "1px",
-                            marginBottom: 6,
-                            fontWeight: 600,
+                            padding: 8,
+                            borderRadius: 6,
+                            background: "#020617",
+                            border: `1px solid ${COLORS.cardBorder}`,
+                            fontSize: 11,
+                            fontFamily: "monospace",
+                            color: COLORS.textDim,
+                            whiteSpace: "pre-wrap",
+                            maxHeight: 80,
+                            overflow: "auto",
                         }}>
-                            Data Structures
+                            <div style={{
+                                fontSize: 9,
+                                color: COLORS.textMuted,
+                                textTransform: "uppercase",
+                                letterSpacing: "1px",
+                                marginBottom: 4,
+                            }}>
+                                stdout
+                            </div>
+                            {step.stdout}
                         </div>
-                        {arrays.map(arr => {
-                            const isPrimary = arr.name === vizCtx.primaryVar;
-                            const prevArr = prevStep?.stack[arr.name] as unknown[] | undefined;
-                            // Only show pointers for the primary array
-                            const arrPointers = isPrimary ? pointerMap : [];
-                            return (
-                                <ArrayRow
-                                    key={arr.name}
-                                    name={arr.name}
-                                    data={arr.value}
-                                    prevData={prevArr}
-                                    pointers={arrPointers}
-                                    isPrimary={isPrimary}
-                                />
-                            );
-                        })}
-                    </div>
-                )}
+                    )}
+                </div>
 
-                {/* Linked Lists — rendered as node chains */}
-                {linkedLists.length > 0 && (
-                    <div>
-                        <div style={{
-                            fontSize: 10,
-                            color: COLORS.textMuted,
-                            textTransform: "uppercase",
-                            letterSpacing: "1px",
-                            marginBottom: 6,
-                            fontWeight: 600,
-                        }}>
-                            Linked Lists
-                        </div>
-                        {linkedLists.map(ll => (
-                            <LinkedListView2D
-                                key={ll.name}
-                                name={ll.name}
-                                values={ll.values}
-                            />
-                        ))}
-                    </div>
-                )}
-
-                {/* Dictionaries / Graphs */}
-                {dicts.length > 0 && (
-                    <div>
-                        {dicts.map(d => {
-                            // Extract graph traversal state from step stack
-                            const graphVisited = step.stack["visited"] as unknown[] | undefined;
-                            const graphQueue = step.stack["queue"] as unknown[] | undefined;
-                            const graphCurrent = step.stack["current"] ?? step.stack["node"] ?? step.stack["curr"];
-                            return (
-                                <DictView
-                                    key={d.name}
-                                    name={d.name}
-                                    data={d.value}
-                                    visited={graphVisited}
-                                    queue={graphQueue}
-                                    current={graphCurrent}
-                                />
-                            );
-                        })}
-                    </div>
-                )}
-
-                {/* Graph Visualizations (adjacency lists from trees/graphs) */}
-                {adjLists.length > 0 && (
-                    <div>
-                        <div style={{
-                            fontSize: 10,
-                            color: COLORS.textMuted,
-                            textTransform: "uppercase",
-                            letterSpacing: "1px",
-                            marginBottom: 6,
-                            fontWeight: 600,
-                        }}>
-                            Graphs
-                        </div>
-                        {adjLists.map(g => {
-                            const graphVisited = step.stack["visited"] as unknown[] | undefined;
-                            const graphQueue = step.stack["queue"] as unknown[] | undefined;
-                            const graphCurrent = step.stack["current"] ?? step.stack["node"] ?? step.stack["curr"];
-                            return (
-                                <GraphView2D
-                                    key={g.name}
-                                    name={g.name}
-                                    adj={g.value as Record<string, number[]>}
-                                    visited={graphVisited}
-                                    queue={graphQueue}
-                                    current={graphCurrent}
-                                />
-                            );
-                        })}
-                    </div>
-                )}
-
-                {/* Structured Graphs (Tries, custom objects) */}
-                {structuredGraphs.length > 0 && (
-                    <div>
-                        <div style={{
-                            fontSize: 10,
-                            color: COLORS.textMuted,
-                            textTransform: "uppercase",
-                            letterSpacing: "1px",
-                            marginBottom: 6,
-                            fontWeight: 600,
-                        }}>
-                            Structured Graphs (Tries)
-                        </div>
-                        {structuredGraphs.map(g => {
-                            const graphVisited = step.stack["visited"] as unknown[] | undefined;
-                            const graphQueue = step.stack["queue"] as unknown[] | undefined;
-                            const graphCurrent = step.stack["current"] ?? step.stack["node"] ?? step.stack["curr"];
-                            return (
-                                <GraphView2D
-                                    key={g.name}
-                                    name={g.name}
-                                    adj={g.value.adjList as Record<string, number[]>}
-                                    visited={graphVisited}
-                                    queue={graphQueue}
-                                    current={graphCurrent}
-                                />
-                            );
-                        })}
-                    </div>
-                )}
-
-                {/* Structured Graphs (Tries, custom objects) */}
-                {structuredGraphs.length > 0 && (
-                    <div>
-                        <div style={{
-                            fontSize: 10,
-                            color: COLORS.textMuted,
-                            textTransform: "uppercase",
-                            letterSpacing: "1px",
-                            marginBottom: 6,
-                            fontWeight: 600,
-                        }}>
-                            Structured Graphs (Tries)
-                        </div>
-                        {structuredGraphs.map(g => {
-                            const graphVisited = step.stack["visited"] as unknown[] | undefined;
-                            const graphQueue = step.stack["queue"] as unknown[] | undefined;
-                            const graphCurrent = step.stack["current"] ?? step.stack["node"] ?? step.stack["curr"];
-                            return (
-                                <GraphView2D
-                                    key={g.name}
-                                    name={g.name}
-                                    adj={g.value.adjList as Record<string, number[]>}
-                                    visited={graphVisited}
-                                    queue={graphQueue}
-                                    current={graphCurrent}
-                                />
-                            );
-                        })}
-                    </div>
-                )}
-
-                {/* Stdout */}
-                {step.stdout && (
+                {/* ═══════ RIGHT COLUMN: Graphs, Dicts, Structured Graphs ═══════ */}
+                {hasRightColumn && (
                     <div style={{
-                        padding: 8,
-                        borderRadius: 6,
-                        background: "#020617",
-                        border: `1px solid ${COLORS.cardBorder}`,
-                        fontSize: 11,
-                        fontFamily: "monospace",
-                        color: COLORS.textDim,
-                        whiteSpace: "pre-wrap",
-                        maxHeight: 80,
+                        flex: "1 1 50%",
+                        minWidth: 0,
                         overflow: "auto",
+                        padding: 16,
+                        borderLeft: "1px solid rgba(0,0,0,0.06)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 14,
                     }}>
-                        <div style={{
-                            fontSize: 9,
-                            color: COLORS.textMuted,
-                            textTransform: "uppercase",
-                            letterSpacing: "1px",
-                            marginBottom: 4,
-                        }}>
-                            stdout
-                        </div>
-                        {step.stdout}
+                        {/* Dictionaries */}
+                        {dicts.length > 0 && (
+                            <div>
+                                {dicts.map(d => {
+                                    const graphVisited = step.stack["visited"] as unknown[] | undefined;
+                                    const graphQueue = step.stack["queue"] as unknown[] | undefined;
+                                    const graphCurrent = step.stack["current"] ?? step.stack["node"] ?? step.stack["curr"];
+                                    return (
+                                        <DictView
+                                            key={d.name}
+                                            name={d.name}
+                                            data={d.value}
+                                            visited={graphVisited}
+                                            queue={graphQueue}
+                                            current={graphCurrent}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Graph Visualizations */}
+                        {adjLists.length > 0 && (
+                            <div>
+                                <div style={sectionHeaderStyle}>Graphs</div>
+                                {adjLists.map(g => {
+                                    const graphVisited = step.stack["visited"] as unknown[] | undefined;
+                                    const graphQueue = step.stack["queue"] as unknown[] | undefined;
+                                    const graphCurrent = step.stack["current"] ?? step.stack["node"] ?? step.stack["curr"];
+                                    return (
+                                        <GraphView2D
+                                            key={g.name}
+                                            name={g.name}
+                                            adj={g.value as Record<string, number[]>}
+                                            visited={graphVisited}
+                                            queue={graphQueue}
+                                            current={graphCurrent}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Structured Graphs (Tries) */}
+                        {structuredGraphs.length > 0 && (
+                            <div>
+                                <div style={sectionHeaderStyle}>Structured Graphs</div>
+                                {structuredGraphs.map(g => {
+                                    const graphVisited = step.stack["visited"] as unknown[] | undefined;
+                                    const graphQueue = step.stack["queue"] as unknown[] | undefined;
+                                    const graphCurrent = step.stack["current"] ?? step.stack["node"] ?? step.stack["curr"];
+                                    return (
+                                        <GraphView2D
+                                            key={g.name}
+                                            name={g.name}
+                                            adj={g.value.adjList as Record<string, number[]>}
+                                            visited={graphVisited}
+                                            queue={graphQueue}
+                                            current={graphCurrent}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 )}
-            </div>
+
+            </div>{/* end two-column body */}
         </div>
     );
 }
