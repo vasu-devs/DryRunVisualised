@@ -136,7 +136,7 @@ export default function Home() {
 
         <div className="flex items-center gap-2">
           {/* Language tabs */}
-          {(["python", "cpp", "java"] as LangKey[]).map((lang) => (
+          {(["python", "cpp"] as LangKey[]).map((lang) => (
             <button
               key={lang}
               onClick={() => handleLanguageChange(lang)}
@@ -273,8 +273,8 @@ export default function Home() {
               onClick={handleExecute}
               disabled={isExecuting}
               className={`px-4 py-2 text-xs font-bold neu-base-pill transition-all ${isExecuting
-                  ? "neu-inset text-[var(--text-secondary)] opacity-60 cursor-wait"
-                  : "neu-extruded text-[var(--accent-dark)] hover:scale-[1.02] active:neu-inset"
+                ? "neu-inset text-[var(--text-secondary)] opacity-60 cursor-wait"
+                : "neu-extruded text-[var(--accent-dark)] hover:scale-[1.02] active:neu-inset"
                 }`}
               title="Run & Visualize"
             >

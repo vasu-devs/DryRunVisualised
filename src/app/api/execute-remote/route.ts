@@ -8,7 +8,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { instrumentCpp } from "@/lib/interpreter/instrumentors/cpp";
-import { instrumentJava } from "@/lib/interpreter/instrumentors/java";
 import { parseTrace } from "@/lib/interpreter/parsers/traceParser";
 
 const GODBOLT_API = "https://godbolt.org/api/compiler";
@@ -16,7 +15,6 @@ const GODBOLT_API = "https://godbolt.org/api/compiler";
 const COMPILER_MAP: Record<string, { id: string; args: string }> = {
     cpp: { id: "g141", args: "-std=c++17 -O0" },
     "c++": { id: "g141", args: "-std=c++17 -O0" },
-    java: { id: "java2102", args: "" },
 };
 
 interface GodboltLine {
@@ -61,10 +59,8 @@ export async function POST(req: NextRequest) {
         let instrumentedCode: string;
         if (lang === "cpp" || lang === "c++") {
             instrumentedCode = instrumentCpp(code);
-        } else if (lang === "java") {
-            instrumentedCode = instrumentJava(code);
         } else {
-            return NextResponse.json({ error: "Language not supported" }, { status: 400 });
+            return NextResponse.json({ error: "Language not supported. Use cpp." }, { status: 400 });
         }
 
         // Call Godbolt Compiler Explorer API

@@ -74,7 +74,17 @@ export const instrumentJava = (userCode: string): string => {
         for (int i = 0; i < a.length; i++) { if (i > 0) s.append(","); s.append(a[i]); }
         return s.append("]").toString();
     }
+    static String __ja(long[] a) {
+        StringBuilder s = new StringBuilder("[");
+        for (int i = 0; i < a.length; i++) { if (i > 0) s.append(","); s.append(a[i]); }
+        return s.append("]").toString();
+    }
     static String __jad(double[] a) {
+        StringBuilder s = new StringBuilder("[");
+        for (int i = 0; i < a.length; i++) { if (i > 0) s.append(","); s.append(a[i]); }
+        return s.append("]").toString();
+    }
+    static String __jab(boolean[] a) {
         StringBuilder s = new StringBuilder("[");
         for (int i = 0; i < a.length; i++) { if (i > 0) s.append(","); s.append(a[i]); }
         return s.append("]").toString();
@@ -85,6 +95,7 @@ export const instrumentJava = (userCode: string): string => {
         return s.append("]").toString();
     }
     static String __jstr(String v) { return v == null ? "null" : "\\"" + v + "\\""; }
+    static String __jchar(char c) { return "\\"" + c + "\\""; }
     static void __et(int line, String vars) {
         if (__tc >= 500) return;
         __tc++;
@@ -107,8 +118,10 @@ function buildJavaTraceExpr(vars: JavaVar[]): string {
     const parts = vars.map(v => {
         if (v.type === 'array_int') return `"\\\"${v.name}\\\":" + __ja(${v.name})`;
         if (v.type === 'array_double') return `"\\\"${v.name}\\\":" + __jad(${v.name})`;
+        if (v.type === 'array_bool') return `"\\\"${v.name}\\\":" + __jab(${v.name})`;
         if (v.type === 'array2d') return `"\\\"${v.name}\\\":" + __ja2d(${v.name})`;
         if (v.type === 'string') return `"\\\"${v.name}\\\":" + __jstr(${v.name})`;
+        if (v.type === 'char') return `"\\\"${v.name}\\\":" + __jchar(${v.name})`;
         if (v.type === 'boolean') return `"\\\"${v.name}\\\":" + ${v.name}`;
         return `"\\\"${v.name}\\\":" + ${v.name}`;
     });
@@ -142,9 +155,11 @@ function lineDeclaresJavaVar(line: string, v: JavaVar): boolean {
     switch (v.type) {
         case 'array_int': return new RegExp(`int\\s*\\[\\]\\s+${escaped}\\b`).test(line);
         case 'array_double': return new RegExp(`double\\s*\\[\\]\\s+${escaped}\\b`).test(line);
+        case 'array_bool': return new RegExp(`boolean\\s*\\[\\]\\s+${escaped}\\b`).test(line);
         case 'array2d': return new RegExp(`int\\s*\\[\\]\\[\\]\\s+${escaped}\\b`).test(line);
         case 'string': return new RegExp(`String\\s+${escaped}\\b`).test(line);
         case 'boolean': return new RegExp(`boolean\\s+${escaped}\\b`).test(line);
+        case 'char': return new RegExp(`char\\s+${escaped}\\b`).test(line);
         case 'int': return new RegExp(`\\b(?:int|long)\\s+.*\\b${escaped}\\b`).test(line);
         case 'double': case 'float': return new RegExp(`\\b(?:double|float)\\s+${escaped}\\b`).test(line);
         default: return false;
@@ -153,7 +168,7 @@ function lineDeclaresJavaVar(line: string, v: JavaVar): boolean {
 
 interface JavaVar {
     name: string;
-    type: 'int' | 'long' | 'double' | 'float' | 'string' | 'boolean' | 'char' | 'array_int' | 'array_double' | 'array2d';
+    type: 'int' | 'long' | 'double' | 'float' | 'string' | 'boolean' | 'char' | 'array_int' | 'array_double' | 'array_bool' | 'array2d';
 }
 
 function extractJavaVarDeclarations(code: string): JavaVar[] {
@@ -167,30 +182,50 @@ function extractJavaVarDeclarations(code: string): JavaVar[] {
 
         let m: RegExpMatchArray | null;
 
+        // 2D int arrays
         m = t.match(/int\s*\[\]\[\]\s+([a-zA-Z_]\w*)\s*[=;]/);
         if (m && !seen.has(m[1])) { seen.add(m[1]); vars.push({ name: m[1], type: 'array2d' }); continue; }
 
+        // 1D int arrays
         m = t.match(/int\s*\[\]\s+([a-zA-Z_]\w*)\s*[=;]/);
         if (m && !seen.has(m[1])) { seen.add(m[1]); vars.push({ name: m[1], type: 'array_int' }); continue; }
 
+        // 1D double arrays
         m = t.match(/double\s*\[\]\s+([a-zA-Z_]\w*)\s*[=;]/);
         if (m && !seen.has(m[1])) { seen.add(m[1]); vars.push({ name: m[1], type: 'array_double' }); continue; }
 
+        // 1D boolean arrays
+        m = t.match(/boolean\s*\[\]\s+([a-zA-Z_]\w*)\s*[=;]/);
+        if (m && !seen.has(m[1])) { seen.add(m[1]); vars.push({ name: m[1], type: 'array_bool' }); continue; }
+
+        // Strings
         m = t.match(/String\s+([a-zA-Z_]\w*)\s*[=;,]/);
         if (m && !seen.has(m[1])) { seen.add(m[1]); vars.push({ name: m[1], type: 'string' }); continue; }
 
+        // Boolean scalars
         m = t.match(/boolean\s+([a-zA-Z_]\w*)\s*[=;,]/);
         if (m && !seen.has(m[1])) { seen.add(m[1]); vars.push({ name: m[1], type: 'boolean' }); continue; }
 
+        // Char scalars  
+        m = t.match(/char\s+([a-zA-Z_]\w*)\s*[=;,]/);
+        if (m && !seen.has(m[1])) { seen.add(m[1]); vars.push({ name: m[1], type: 'char' }); continue; }
+
+        // Int/long scalars (standard declaration)
         m = t.match(/\b(int|long)\s+([a-zA-Z_]\w*)\s*[=;,]/);
         if (m && !seen.has(m[2])) { seen.add(m[2]); vars.push({ name: m[2], type: 'int' }); }
 
+        // Enhanced for-loop variable: for (int x : arr)
+        m = t.match(/for\s*\(\s*(int|long)\s+([a-zA-Z_]\w*)\s*:/);
+        if (m && !seen.has(m[2])) { seen.add(m[2]); vars.push({ name: m[2], type: 'int' }); }
+
+        // Multi-declaration on same line: int a = 0, b = 0
         const multiMatch = t.match(/\b(?:int|long)\s+\w+\s*=[^,;]*,\s*([a-zA-Z_]\w*)\s*[=;]/);
         if (multiMatch && !seen.has(multiMatch[1])) {
             seen.add(multiMatch[1]);
             vars.push({ name: multiMatch[1], type: 'int' });
         }
 
+        // Double/float scalars
         m = t.match(/\b(double|float)\s+([a-zA-Z_]\w*)\s*[=;,]/);
         if (m && !seen.has(m[2])) { seen.add(m[2]); vars.push({ name: m[2], type: m[1] as 'double' | 'float' }); }
     }
