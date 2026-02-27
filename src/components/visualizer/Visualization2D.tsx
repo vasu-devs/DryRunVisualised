@@ -496,7 +496,7 @@ function GraphView2D({
     const currentStr = current !== undefined ? String(current) : null;
 
     // Use shared layout engine
-    const { layout, edges, nodes: nodeIds } = useGraphLayout(adj, 100, 200);
+    const { layout, edges, nodes: nodeIds } = useGraphLayout(adj, 60, 200);
 
     // Compute bounding box based on shared layout
     const bounds = useMemo(() => {
@@ -541,7 +541,8 @@ function GraphView2D({
         const cdx = midX - graphCenter.x, cdy = midY - graphCenter.y;
         const dot = cdx * perpX + cdy * perpY;
         const sign = dot >= 0 ? 1 : -1;
-        const curvature = Math.min(dist * 0.12, 25);
+        // Minimum curvature prevents edge overlap for close/collinear nodes
+        const curvature = Math.max(8, Math.min(dist * 0.15, 25));
         const ctrlX = midX + perpX * curvature * sign;
         const ctrlY = midY + perpY * curvature * sign;
 

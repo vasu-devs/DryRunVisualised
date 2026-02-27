@@ -47,20 +47,6 @@ function CameraRig({
         };
     }, [mode]);
 
-    // Touch controls
-    const touches = useMemo(() => {
-        if (mode === "pan") {
-            return {
-                ONE: THREE.TOUCH.PAN,
-                TWO: THREE.TOUCH.DOLLY_ROTATE,
-            };
-        }
-        return {
-            ONE: THREE.TOUCH.ROTATE,
-            TWO: THREE.TOUCH.DOLLY_PAN,
-        };
-    }, [mode]);
-
     // Reset camera when resetKey changes
     useEffect(() => {
         if (controlsRef.current && resetKey > 0) {
@@ -68,23 +54,107 @@ function CameraRig({
         }
     }, [resetKey]);
 
+    // ── Custom touch gesture handler ──
+    // OrbitControls' built-in touch is limited, so we handle it ourselves:
+    // - Pinch (finger distance change) → zoom (dolly)
+    // - Two-finger drag (center movement) → orbit (rotate camera)
+    useEffect(() => {
+        const controls = controlsRef.current;
+        if (!controls) return;
+        const domElement = controls.domElement as HTMLCanvasElement;
+        if (!domElement) return;
+
+        let prevTouchDist = 0;
+        let prevTouchCenter = { x: 0, y: 0 };
+
+        const getTouchInfo = (touches: TouchList) => {
+            const t0 = touches[0];
+            const t1 = touches[1];
+            const dx = t1.clientX - t0.clientX;
+            const dy = t1.clientY - t0.clientY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const cx = (t0.clientX + t1.clientX) / 2;
+            const cy = (t0.clientY + t1.clientY) / 2;
+            return { dist, center: { x: cx, y: cy } };
+        };
+
+        const onTouchStart = (e: TouchEvent) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                const info = getTouchInfo(e.touches);
+                prevTouchDist = info.dist;
+                prevTouchCenter = info.center;
+            }
+        };
+
+        const onTouchMove = (e: TouchEvent) => {
+            if (e.touches.length !== 2 || !controls) return;
+            e.preventDefault();
+
+            const info = getTouchInfo(e.touches);
+
+            // ── Pinch-to-zoom ──
+            const distDelta = info.dist - prevTouchDist;
+            if (Math.abs(distDelta) > 1) {
+                const zoomFactor = 1 - distDelta * 0.005;
+                const camera = controls.object as THREE.PerspectiveCamera;
+                const offset = new THREE.Vector3().copy(camera.position).sub(controls.target);
+                offset.multiplyScalar(zoomFactor);
+                const newDist = offset.length();
+                // Clamp to min/max distance
+                if (newDist >= 2 && newDist <= 150) {
+                    camera.position.copy(controls.target).add(offset);
+                    controls.update();
+                }
+            }
+
+            // ── Two-finger drag to orbit ──
+            const centerDx = info.center.x - prevTouchCenter.x;
+            const centerDy = info.center.y - prevTouchCenter.y;
+            if (Math.abs(centerDx) > 0.5 || Math.abs(centerDy) > 0.5) {
+                const rotateSpeed = 0.004;
+                // Horizontal drag → azimuthal rotation (left/right)
+                controls.rotateLeft(centerDx * rotateSpeed);
+                // Vertical drag → polar rotation (up/down)
+                controls.rotateUp(centerDy * rotateSpeed);
+                controls.update();
+            }
+
+            prevTouchDist = info.dist;
+            prevTouchCenter = info.center;
+        };
+
+        domElement.addEventListener("touchstart", onTouchStart, { passive: false });
+        domElement.addEventListener("touchmove", onTouchMove, { passive: false });
+
+        return () => {
+            domElement.removeEventListener("touchstart", onTouchStart);
+            domElement.removeEventListener("touchmove", onTouchMove);
+        };
+    }, []);
+
     return (
         <OrbitControls
             ref={controlsRef}
             makeDefault
             target={target}
             mouseButtons={mouseButtons}
-            touches={touches}
+            touches={{
+                ONE: mode === "pan" ? THREE.TOUCH.PAN : THREE.TOUCH.ROTATE,
+                TWO: -1 as unknown as THREE.TOUCH, // Disable built-in two-finger (we handle it)
+            }}
             enableDamping
-            dampingFactor={0.06} // Smoother, heavier feel
-            rotateSpeed={0.6}
-            panSpeed={0.7}
-            zoomSpeed={1.0}
-            minDistance={3}
+            dampingFactor={0.08}
+            rotateSpeed={0.5}
+            panSpeed={0.8}
+            zoomSpeed={1.2}
+            minDistance={2}
             maxDistance={150}
-            maxPolarAngle={Math.PI / 2 - 0.05} // Prevent going strictly under the floor
+            maxPolarAngle={Math.PI / 2 - 0.05}
             minPolarAngle={0.1}
             autoRotate={false}
+            enableZoom={true}
+            zoomToCursor={true}
         />
     );
 }
@@ -120,7 +190,7 @@ function CameraToolbar({
                 <button
                     onClick={() => setMode("pan")}
                     className={`${btnBase} ${mode === "pan" ? active : inactive}`}
-                    title="Pan mode — drag to move (Left click)"
+                    title="Pan mode — drag to move (Left click / 1 finger)"
                 >
                     {/* Move/pan icon */}
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -130,7 +200,7 @@ function CameraToolbar({
                 <button
                     onClick={() => setMode("orbit")}
                     className={`${btnBase} ${mode === "orbit" ? active : inactive}`}
-                    title="Orbit mode — drag to rotate (Left click)"
+                    title="Orbit mode — drag to rotate (Left click / 1 finger)"
                 >
                     {/* Orbit/rotate icon */}
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -230,6 +300,8 @@ export function Scene() {
         canvas.addEventListener("webglcontextrestored", () => {
             setContextLost(false);
         });
+        // Enable touch-action for proper gesture recognition
+        canvas.style.touchAction = "none";
     }, []);
 
     if (contextLost) {
@@ -249,7 +321,7 @@ export function Scene() {
     }
 
     return (
-        <div className="relative w-full h-full bg-transparent" ref={canvasContainerRef}>
+        <div className="relative w-full h-full bg-transparent" ref={canvasContainerRef} style={{ touchAction: "none" }}>
             {/* 3D Canvas */}
             <Canvas
                 shadows
@@ -261,6 +333,7 @@ export function Scene() {
                 }}
                 onCreated={handleCreated}
                 frameloop="always"
+                style={{ touchAction: "none" }}
             >
                 <Suspense fallback={null}>
                     <PerspectiveCamera
@@ -313,11 +386,11 @@ export function Scene() {
                 onZoomOut={() => handleZoom("out")}
             />
 
-            {/* Hint text */}
+            {/* Hint text — desktop + touch */}
             <div className="absolute top-4 left-4 z-10 text-[11px] text-[var(--text-secondary)] font-mono pointer-events-none select-none">
                 {cameraMode === "pan"
-                    ? "LMB: Pan · RMB: Orbit · Scroll: Zoom"
-                    : "LMB: Orbit · RMB: Pan · Scroll: Zoom"}
+                    ? "LMB: Pan · RMB: Orbit · Scroll: Zoom · Touch: 1F Pan · 2F Rotate+Zoom"
+                    : "LMB: Orbit · RMB: Pan · Scroll: Zoom · Touch: 1F Orbit · 2F Rotate+Zoom"}
             </div>
         </div>
     );

@@ -14,7 +14,7 @@ const BAR_SPACING = 1.4;
 const BAR_DEPTH = 0.8;
 const GRID_TILE = 0.9;
 const GRID_GAP = 0.1;
-const GRAPH_SCALE = 2.2;
+const GRAPH_SCALE = 1.5;
 
 // ─── Persistent drag position store (survives re-renders / step changes) ─
 const dragPositionStore = new Map<string, [number, number, number]>();
@@ -1224,8 +1224,8 @@ function GraphView3D({
         const dot = centerDx * perpX + centerDy * perpY;
         const sign = dot >= 0 ? 1 : -1;
 
-        // Curve strength proportional to distance (longer edges curve more)
-        const curvature = Math.min(dist * 0.15, 1.2);
+        // Curve strength proportional to distance — minimum curvature prevents overlap for close nodes
+        const curvature = Math.max(0.35, Math.min(dist * 0.18, 1.5));
         const ctrlX = midX + perpX * curvature * sign;
         const ctrlY = midY + perpY * curvature * sign;
 
@@ -2186,7 +2186,7 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
                 const current = step.stack.current ?? step.stack.node ?? step.stack.curr;
 
                 // Spread multiple graphs along X axis
-                const graphSpacing = 15;
+                const graphSpacing = 8;
                 const xPos = GRAPH_X_OFFSET + idx * graphSpacing;
 
                 return (

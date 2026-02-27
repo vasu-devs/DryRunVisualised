@@ -43,18 +43,21 @@ export function useGraphLayout(
         const positions: Record<string, { x: number; y: number }> = {};
         nodeIds.forEach((id, i) => {
             const angle = (2 * Math.PI * i) / actualN - Math.PI / 2;
-            const noiseX = (seededRandom(i * 10) - 0.5) * scale * 0.1;
-            const noiseY = (seededRandom(i * 10 + 1) - 0.5) * scale * 0.1;
+            const noiseX = (seededRandom(i * 10) - 0.5) * scale * 0.05;
+            const noiseY = (seededRandom(i * 10 + 1) - 0.5) * scale * 0.05;
             positions[id] = {
-                x: Math.cos(angle) * scale * 0.8 + noiseX,
-                y: Math.sin(angle) * scale * 0.8 + noiseY,
+                x: Math.cos(angle) * scale * 0.5 + noiseX,
+                y: Math.sin(angle) * scale * 0.5 + noiseY,
             };
         });
 
         // 3. Robust Force simulation (Fruchterman-Reingold inspired)
-        const REPULSION = scale * scale * 1.2;
-        const SPRING_K = 0.05;
-        const IDEAL_LENGTH = scale * 0.9;
+        // Tuned for compact, readable layouts:
+        // - Lower repulsion keeps nodes closer together
+        // - Shorter ideal length prevents graphs from sprawling
+        const REPULSION = scale * scale * 0.8;
+        const SPRING_K = 0.08;
+        const IDEAL_LENGTH = scale * 0.55;
         const DAMPING = 0.85;
 
         for (let iter = 0; iter < iterations; iter++) {
@@ -102,10 +105,10 @@ export function useGraphLayout(
                 forces[b].fy -= fy;
             }
 
-            // 3c. Center Gravity
+            // 3c. Center Gravity (stronger to keep graph compact)
             for (const id of nodeIds) {
-                forces[id].fx -= positions[id].x * 0.02;
-                forces[id].fy -= positions[id].y * 0.02;
+                forces[id].fx -= positions[id].x * 0.04;
+                forces[id].fy -= positions[id].y * 0.04;
             }
 
             // 3d. Apply forces with a simulated annealing cooling schedule
