@@ -24,7 +24,7 @@ export default function LandingPage() {
                 </div>
                 <div className="flex gap-6">
                     <Link href="/visualizer" className="text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--accent-dark)] transition-colors">Workspace</Link>
-                    <a href="https://github.com" target="_blank" className="text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--accent-dark)] transition-colors">GitHub</a>
+                    <a href="https://github.com/vasu-devs/DryRunVisualised" target="_blank" className="text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--accent-dark)] transition-colors">GitHub</a>
                 </div>
             </nav>
 
