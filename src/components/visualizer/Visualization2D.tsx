@@ -244,8 +244,8 @@ function ScalarBadge({
         <div style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: 6,
-            padding: "8px 14px",
+            gap: 10,
+            padding: "14px 22px",
             borderRadius: NEU_RADIUS_MD,
             background: changed ? COLORS.changedBg : COLORS.cardBg,
             boxShadow: changed ? NEU_SHADOW_PRESSED : NEU_SHADOW_RAISED,
@@ -257,33 +257,37 @@ function ScalarBadge({
                 }`,
             transition: "all 0.25s cubic-bezier(0.25, 1, 0.5, 1)",
             transform: changed ? "scale(1.05)" : "scale(1)",
+            minWidth: 80,
         }}>
             <span style={{
-                fontSize: 11,
+                fontSize: 15,
                 color: isPointer ? COLORS.pointer : COLORS.textDim,
                 fontFamily: "monospace",
                 fontWeight: 600,
+                letterSpacing: "0.02em",
             }}>
                 {name}
             </span>
             <span style={{
-                fontSize: 10,
+                fontSize: 14,
                 color: COLORS.textMuted,
+                fontWeight: 500,
             }}>=</span>
             <span style={{
-                fontSize: 12,
+                fontSize: 18,
                 color: changed ? COLORS.changed : COLORS.text,
                 fontFamily: "monospace",
-                fontWeight: changed ? 700 : 500,
+                fontWeight: changed ? 700 : 600,
             }}>
                 {displayVal}
             </span>
             {changed && prevValue !== undefined && (
                 <span style={{
-                    fontSize: 9,
+                    fontSize: 12,
                     color: COLORS.textMuted,
                     fontFamily: "monospace",
                     textDecoration: "line-through",
+                    opacity: 0.7,
                 }}>
                     {String(prevValue)}
                 </span>
@@ -291,6 +295,7 @@ function ScalarBadge({
         </div>
     );
 }
+
 
 // ─── Helper: detect serialized linked list ────────────────────
 function isLinkedListValue2D(val: unknown): val is { __type__: "linked_list"; values: unknown[] } {

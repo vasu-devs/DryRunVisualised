@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { CodeEditor } from "@/components/editor/CodeEditor";
 import { Scene } from "@/components/three/Scene";
 import { Toolbar } from "@/components/controls/Toolbar";
@@ -35,6 +35,40 @@ export default function Home() {
   const [executionStatus, setExecutionStatus] = useState("");
   const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // ─── Resizable panels ───
+  const [leftPanelWidth, setLeftPanelWidth] = useState(420);
+  const isDragging = useRef(false);
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, []);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!isDragging.current || !bodyRef.current) return;
+      const rect = bodyRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      setLeftPanelWidth(Math.min(700, Math.max(280, x)));
+    };
+    const onUp = () => {
+      if (isDragging.current) {
+        isDragging.current = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      }
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, []);
   const setTrace = useTraceStore((state) => state.setTrace);
   const trace = useTraceStore((s) => s.trace);
   const currentStep = useTraceStore((s) => {
@@ -173,15 +207,15 @@ export default function Home() {
       <div className="neu-divider mx-6" />
 
       {/* ═══════════════════════════════════════════════════════════
-          BODY — 2-column dashboard
+          BODY — 2-column resizable dashboard
           ═══════════════════════════════════════════════════════════ */}
-      <div className="flex-1 flex gap-4 p-4 min-h-0">
+      <div ref={bodyRef} className="flex-1 flex p-4 min-h-0">
 
         {/* ─────────────────────────────────────────────────────────
-            LEFT PANEL — Extruded Control Deck
+            LEFT PANEL — Extruded Control Deck (Resizable)
             ───────────────────────────────────────────────────────── */}
         {!isFullscreen && (
-          <div className="w-[420px] shrink-0 neu-extruded neu-base-card flex flex-col overflow-hidden">
+          <div style={{ width: leftPanelWidth, minWidth: 280, maxWidth: 700 }} className="shrink-0 neu-extruded neu-base-card flex flex-col overflow-hidden">
 
             {/* Controls Row */}
             <div className="shrink-0 px-4 pt-4 pb-3">
@@ -233,10 +267,21 @@ export default function Home() {
           </div>
         )}
 
+        {/* ─── Draggable Resize Handle ─── */}
+        {!isFullscreen && (
+          <div
+            className="flex items-center justify-center shrink-0 group cursor-col-resize"
+            style={{ width: 14, zIndex: 30 }}
+            onMouseDown={handleDragStart}
+          >
+            <div className="w-[4px] h-14 rounded-full bg-[var(--text-secondary)] opacity-20 group-hover:opacity-60 group-hover:h-24 group-hover:bg-[var(--accent-dark)] group-hover:w-[5px] transition-all duration-200" />
+          </div>
+        )}
+
         {/* ─────────────────────────────────────────────────────────
             CENTER STAGE — Inset Viewport Well
             ───────────────────────────────────────────────────────── */}
-        <div className="flex-1 neu-inset neu-base-card flex flex-col overflow-hidden relative">
+        <div className="flex-1 neu-inset neu-base-card flex flex-col overflow-hidden relative min-w-0">
 
           {/* Floating overlay: 2D/3D toggle + metadata + controls */}
           <div className="flex items-center gap-3 px-5 py-3 z-20 absolute top-0 left-0 right-0">
