@@ -1,6 +1,6 @@
 "use client";
 
-import { SkipBack, SkipForward, RotateCcw, Zap, Loader2 } from "lucide-react";
+import { SkipBack, SkipForward, RotateCcw, Play, Loader2 } from "lucide-react";
 import { useTraceStore } from "@/lib/store/traceStore";
 
 interface ToolbarProps {
@@ -26,7 +26,7 @@ export function Toolbar({ onExecute, isExecuting }: ToolbarProps) {
                     </>
                 ) : (
                     <>
-                        <Zap size={16} fill="currentColor" />
+                        <Play size={16} fill="currentColor" />
                         Run &amp; Visualize
                     </>
                 )}

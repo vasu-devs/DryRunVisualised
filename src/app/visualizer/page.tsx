@@ -6,7 +6,7 @@ import { Scene } from "@/components/three/Scene";
 import { Toolbar } from "@/components/controls/Toolbar";
 import { StepSlider } from "@/components/controls/StepSlider";
 import { VariablePanel, StdoutPanel } from "@/components/panels/InfoPanels";
-import { Github } from "lucide-react";
+import { Github, Play, Loader2 } from "lucide-react";
 import { useTraceStore } from "@/lib/store/traceStore";
 import { Visualization2D } from "@/components/visualizer/Visualization2D";
 import { detectVizType } from "@/lib/vizDetector";
@@ -384,7 +384,7 @@ export default function Home() {
                 }`}
               title="Run & Visualize"
             >
-              {isExecuting ? "⏳ Running..." : "⚡ Run"}
+              {isExecuting ? (<><Loader2 size={14} className="animate-spin inline mr-1" />Running...</>) : (<><Play size={14} fill="currentColor" className="inline mr-1" />Run</>)}
             </button>
 
             {executionStatus && (
@@ -414,7 +414,7 @@ export default function Home() {
                     <circle cx="16" cy="36" r="3" />
                   </svg>
                   <span className="text-sm font-medium">Run your code to see the 3D visualization</span>
-                  <span className="text-xs opacity-60">Write an algorithm → click ⚡ Run</span>
+                  <span className="text-xs opacity-60">Write an algorithm → click Run</span>
                 </div>
               )
             ) : (

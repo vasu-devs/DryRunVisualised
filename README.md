@@ -24,26 +24,19 @@ Visual DSA is a **real-time algorithm visualizer** that renders data structure o
 
 | Feature | Description |
 |---------|-------------|
-| **Dual View** | Side-by-side 2D (SVG/DOM) and 3D (WebGL/Three.js) visualizations |
+| **Dual View** | Toggle between interactive 2D (SVG/DOM) and immersive 3D (WebGL/Three.js) visualizations |
 | **Multi-Language** | Python (client-side via Pyodide) & C++ (remote via Godbolt Compiler Explorer) |
 | **50+ Pre-built Algorithms** | Searching, Sorting, Graph Traversal, DP, Backtracking, Linked Lists, and more |
 | **Step-by-Step Debugger** | Play/pause, step forward/backward, adjustable speed slider |
+| **Resizable Panels** | Drag dividers to resize code editor, variables panel, and visualization viewport |
 | **Change Highlighting** | Amber glow on modified cells, strikethrough on previous values |
 | **Interactive 3D** | Orbit, zoom, pan — drag nodes, hover for tooltips, fullscreen mode |
 | **Linked List Arrows** | Proper SVG nodes with `data | next` compartments and curved arrow connectors |
 | **Graph Visualization** | Force-directed layouts for adjacency-list graphs with BFS/DFS coloring |
 | **Code Editor** | Monaco Editor with syntax highlighting, line-by-line active step markers |
 | **Canvas Auto-Clear** | Clean slate on every run — no visual artifacts between algorithm switches |
-
----
-
-## 📸 Screenshots
-
-> _Replace these with actual screenshots of your running application._
-
-| 2D Visualization | 3D Visualization |
-|:-:|:-:|
-| Arrays, scalars, linked lists | Bars, grids, graph spheres |
+| **Engraved Landing** | Homepage with 10 different data structure SVGs etched into the neumorphic surface |
+| **Analytics** | Vercel Analytics integration for page view tracking |
 
 ---
 
@@ -53,10 +46,10 @@ Visual DSA is a **real-time algorithm visualizer** that renders data structure o
 ┌─────────────────────────────────────────────────────────────┐
 │                        Next.js App                          │
 │  ┌──────────┐  ┌──────────────┐  ┌────────────────────────┐ │
-│  │  Monaco   │  │   Playback   │  │   Visualization Layer  │ │
-│  │  Editor   │  │   Controls   │  │  ┌─────┐   ┌────────┐ │ │
-│  │          │  │  ⏮ ▶ ⏭ 🔄  │  │  │ 2D  │   │  3D    │ │ │
-│  │          │  │  Speed Slider │  │  │ SVG │   │Three.js│ │ │
+│  │  Monaco   │  │   Controls   │  │   Visualization Layer  │ │
+│  │  Editor   │  │  ⏮ ▶ ⏭ 🔄  │  │  ┌─────┐   ┌────────┐ │ │
+│  │          │  │  Speed Slider │  │  │ 2D  │   │  3D    │ │ │
+│  │  ↔ Resize│  │  ↔ Resize    │  │  │ SVG │   │Three.js│ │ │
 │  └──────────┘  └──────┬───────┘  │  └─────┘   └────────┘ │ │
 │                       │          └─────────┬──────────────┘ │
 │                       ▼                    │                │
@@ -131,6 +124,7 @@ npm start
 | **Styling** | Tailwind CSS 4 | Neumorphic design system with CSS variables |
 | **Animation** | Framer Motion 12 | Page transitions, micro-interactions |
 | **Icons** | Lucide React | Consistent SVG icon system |
+| **Analytics** | Vercel Analytics | Page view and visitor tracking |
 | **Python Runtime** | Pyodide (WASM) | Client-side Python execution in the browser |
 | **C++ Compiler** | Godbolt API (GCC 14.1) | Remote C++ compilation and execution |
 | **Validation** | Zod 4 | Runtime type validation |
@@ -143,11 +137,11 @@ npm start
 ```
 src/
 ├── app/
-│   ├── page.tsx                    # Landing page
-│   ├── layout.tsx                  # Root layout + metadata
+│   ├── page.tsx                    # Landing page (engraved DS background)
+│   ├── layout.tsx                  # Root layout + metadata + Analytics
 │   ├── globals.css                 # Neumorphic design tokens & utilities
 │   ├── visualizer/
-│   │   └── page.tsx                # Main visualizer workspace
+│   │   └── page.tsx                # Main visualizer workspace (resizable panels)
 │   └── api/
 │       ├── execute/route.ts        # Python local execution endpoint
 │       └── execute-remote/route.ts # C++ remote execution via Godbolt
@@ -158,7 +152,7 @@ src/
 │   ├── editor/
 │   │   └── MonacoEditor.tsx        # Code editor with active line markers
 │   ├── layout/
-│   │   └── VisualizerLayout.tsx    # Two-panel workspace layout
+│   │   └── VisualizerLayout.tsx    # Resizable two-panel workspace layout
 │   ├── panels/
 │   │   └── ControlPanel.tsx        # Algorithm selector + language tabs
 │   ├── three/
