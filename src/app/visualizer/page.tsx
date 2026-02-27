@@ -6,6 +6,7 @@ import { Scene } from "@/components/three/Scene";
 import { Toolbar } from "@/components/controls/Toolbar";
 import { StepSlider } from "@/components/controls/StepSlider";
 import { VariablePanel, StdoutPanel } from "@/components/panels/InfoPanels";
+import { Github } from "lucide-react";
 import { useTraceStore } from "@/lib/store/traceStore";
 import { Visualization2D } from "@/components/visualizer/Visualization2D";
 import { detectVizType } from "@/lib/vizDetector";
@@ -192,14 +193,14 @@ export default function Home() {
         <div className="flex items-center gap-3">
           {/* Logo — uses actual favicon image */}
           <div className="w-10 h-10 neu-extruded rounded-2xl flex items-center justify-center overflow-hidden p-1.5">
-            <img src="/favicon.png" alt="Dry Runner" className="w-full h-full object-contain" />
+            <img src="/favicon.png" alt="Visual DSA" className="w-full h-full object-contain" />
           </div>
           <div className="flex flex-col">
             <h1 className="text-[15px] font-semibold tracking-[-0.01em] text-[var(--text-primary)] leading-tight font-[var(--font-sans)]">
-              Dry Runner
+              Visual DSA
             </h1>
             <span className="text-[10px] font-medium text-[var(--text-secondary)] tracking-[0.05em] uppercase leading-tight">
-              3D Visualizer
+              Algorithm Visualizer
             </span>
           </div>
         </div>
@@ -236,7 +237,30 @@ export default function Home() {
               </optgroup>
             ))}
           </select>
+
+          <div className="w-[1px] h-7 rounded-full neu-inset mx-2 opacity-40" />
+
+          {/* GitHub */}
+          <a
+            href="https://github.com/vasu-devs/DryRunVisualised"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="neu-extruded neu-base-pill px-4 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)] hover:text-[var(--accent-dark)] transition-all flex items-center gap-1.5"
+          >
+            <Github size={13} />
+            GitHub
+          </a>
         </div>
+
+        {/* Credit */}
+        <a
+          href="https://vasudev.live"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[10px] font-medium text-[var(--text-secondary)] opacity-50 hover:opacity-100 hover:text-[var(--accent-dark)] transition-all"
+        >
+          Made with ❤️ by vasu-devs
+        </a>
       </header>
 
       {/* Gradient divider */}

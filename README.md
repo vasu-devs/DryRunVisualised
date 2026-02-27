@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🧊 Dry Runner — 3D Algorithm Visualizer
+# 🧊 Visual DSA — Algorithm Visualizer
 
-**Write code. Step through execution. Watch data structures come alive in 3D.**
+**Write code. Step through execution. Watch data structures come alive in 2D and 3D.**
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)
@@ -16,9 +16,9 @@
 
 ---
 
-## ✨ What is Dry Runner?
+## ✨ What is Visual DSA?
 
-Dry Runner is a **real-time algorithm visualizer** that renders data structure operations in both **2D** and **interactive 3D** environments. Write your algorithm in Python or C++, hit Run, and watch arrays sort, graphs traverse, linked lists re-wire, and matrices transform — step by step, with full variable inspection at every line.
+Visual DSA is a **real-time algorithm visualizer** that renders data structure operations in both **interactive 2D** and **immersive 3D** environments. Write your algorithm in Python or C++, hit Run, and watch arrays sort, graphs traverse, linked lists re-wire, and matrices transform — step by step, with full variable inspection at every line.
 
 ### 🎯 Key Features
 
@@ -310,8 +310,8 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 <div align="center">
 
-**Built with ❤️ for DSA learners everywhere.**
+**Built with ❤️ by [vasu-devs](https://vasudev.live) for DSA learners everywhere.**
 
-[⬆ Back to Top](#-dry-runner--3d-algorithm-visualizer)
+[⬆ Back to Top](#-visual-dsa--algorithm-visualizer)
 
 </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Github } from "lucide-react";
 
 export default function LandingPage() {
     return (
@@ -11,19 +11,20 @@ export default function LandingPage() {
             <nav className="absolute top-8 left-8 right-8 flex justify-between items-center z-50">
                 <div className="flex items-center gap-3">
                     <div className="w-12 h-12 neu-extruded rounded-2xl flex items-center justify-center overflow-hidden p-2">
-                        <img src="/favicon.png" alt="Dry Runner" className="w-full h-full object-contain" />
+                        <img src="/favicon.png" alt="Visual DSA" className="w-full h-full object-contain" />
                     </div>
                     <div className="flex flex-col">
                         <span className="text-sm font-semibold tracking-[-0.01em] text-[var(--text-primary)] leading-tight">
-                            Dry Runner
+                            Visual DSA
                         </span>
                         <span className="text-[9px] font-medium text-[var(--text-secondary)] tracking-[0.05em] uppercase leading-tight">
-                            3D Visualizer
+                            Algorithm Visualizer
                         </span>
                     </div>
                 </div>
                 <div className="flex gap-4">
-                    <a href="https://github.com/vasu-devs/DryRunVisualised" target="_blank" rel="noopener noreferrer" className="neu-extruded neu-base-pill px-5 py-2.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)] hover:text-[var(--accent-dark)] transition-all">
+                    <a href="https://github.com/vasu-devs/DryRunVisualised" target="_blank" rel="noopener noreferrer" className="neu-extruded neu-base-pill px-5 py-2.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)] hover:text-[var(--accent-dark)] transition-all flex items-center gap-2">
+                        <Github size={14} />
                         GitHub
                     </a>
                 </div>
@@ -49,7 +50,7 @@ export default function LandingPage() {
 
                 {/* Subheadline */}
                 <p className="text-lg md:text-xl text-[var(--text-secondary)] font-medium max-w-2xl leading-relaxed mb-16">
-                    A strictly tactile environment for algorithmic execution. Write code, step through memory, and feel the objects react in a premium 3D space.
+                    A strictly tactile environment for algorithmic execution. Write code, step through memory, and watch objects react in interactive 2D and immersive 3D.
                 </p>
 
                 {/* Pill CTA - Extruded that turns Inset on active */}
@@ -69,6 +70,16 @@ export default function LandingPage() {
             <div className="absolute inset-0 z-0 pointer-events-none flex items-center justify-center">
                 <div className="w-[120%] h-[120%] bg-[radial-gradient(ellipse_at_center,var(--shadow-light)_0%,transparent_70%)] opacity-30"></div>
             </div>
+
+            {/* Credit */}
+            <a
+                href="https://vasudev.live"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute bottom-6 z-50 text-[11px] font-medium text-[var(--text-secondary)] opacity-50 hover:opacity-100 hover:text-[var(--accent-dark)] transition-all"
+            >
+                Made with ❤️ by vasu-devs
+            </a>
 
         </div>
     );
