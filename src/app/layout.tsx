@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Outfit, Fira_Code } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -29,8 +30,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${outfit.variable} ${firaCode.variable} antialiased text-[var(--foreground)] bg-[var(--background)] font-sans`}>
-        {/* Global Page Content */}
         {children}
+        <Analytics />
       </body>
     </html>
   );

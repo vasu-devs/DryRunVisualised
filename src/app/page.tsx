@@ -22,9 +22,10 @@ export default function LandingPage() {
                         </span>
                     </div>
                 </div>
-                <div className="flex gap-6">
-                    <Link href="/visualizer" className="text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--accent-dark)] transition-colors">Workspace</Link>
-                    <a href="https://github.com/vasu-devs/DryRunVisualised" target="_blank" className="text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--accent-dark)] transition-colors">GitHub</a>
+                <div className="flex gap-4">
+                    <a href="https://github.com/vasu-devs/DryRunVisualised" target="_blank" rel="noopener noreferrer" className="neu-extruded neu-base-pill px-5 py-2.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)] hover:text-[var(--accent-dark)] transition-all">
+                        GitHub
+                    </a>
                 </div>
             </nav>
 

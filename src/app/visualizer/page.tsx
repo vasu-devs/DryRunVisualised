@@ -266,13 +266,15 @@ export default function Home() {
               <CodeEditor code={code} language={language === "cpp" ? "cpp" : language} onChange={(val) => setCode(val || "")} />
             </div>
 
-            {/* ─── Vertical Drag Handle ─── */}
+            {/* ─── Vertical Drag Handle (neumorphic) ─── */}
             <div
-              className="flex justify-center items-center shrink-0 group cursor-row-resize"
-              style={{ height: 12, zIndex: 30 }}
+              className="flex justify-center items-center shrink-0 group cursor-row-resize mx-4"
+              style={{ height: 16, zIndex: 30 }}
               onMouseDown={handleVDragStart}
             >
-              <div className="h-[3px] w-12 rounded-full bg-[var(--text-secondary)] opacity-20 group-hover:opacity-60 group-hover:w-20 group-hover:bg-[var(--accent-dark)] group-hover:h-[4px] transition-all duration-200" />
+              <div className="neu-inset rounded-full flex items-center justify-center" style={{ width: 64, height: 10 }}>
+                <div className="rounded-full bg-[var(--text-secondary)] opacity-30 group-hover:opacity-70 group-hover:bg-[var(--accent-dark)] transition-all duration-200" style={{ width: 32, height: 3 }} />
+              </div>
             </div>
 
             {/* Variables + Console — resizable bottom section */}
@@ -312,14 +314,16 @@ export default function Home() {
           </div>
         )}
 
-        {/* ─── Draggable Resize Handle ─── */}
+        {/* ─── Horizontal Drag Handle (neumorphic) ─── */}
         {!isFullscreen && (
           <div
-            className="flex items-center justify-center shrink-0 group cursor-col-resize"
-            style={{ width: 14, zIndex: 30 }}
+            className="flex items-center justify-center shrink-0 group cursor-col-resize my-4"
+            style={{ width: 16, zIndex: 30 }}
             onMouseDown={handleDragStart}
           >
-            <div className="w-[4px] h-14 rounded-full bg-[var(--text-secondary)] opacity-20 group-hover:opacity-60 group-hover:h-24 group-hover:bg-[var(--accent-dark)] group-hover:w-[5px] transition-all duration-200" />
+            <div className="neu-inset rounded-full flex items-center justify-center" style={{ width: 10, height: 64 }}>
+              <div className="rounded-full bg-[var(--text-secondary)] opacity-30 group-hover:opacity-70 group-hover:bg-[var(--accent-dark)] transition-all duration-200" style={{ width: 3, height: 32 }} />
+            </div>
           </div>
         )}
 
