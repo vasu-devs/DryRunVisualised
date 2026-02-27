@@ -263,16 +263,16 @@ export default function LandingPage() {
 
             {/* Top Bar */}
             <nav className="absolute top-8 left-8 right-8 flex justify-between items-center z-50">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 neu-extruded rounded-2xl flex items-center justify-center overflow-hidden p-1.5">
+                <div className="neu-extruded neu-base-pill flex items-center gap-2 px-4 py-2.5">
+                    <div className="w-5 h-5 rounded-md overflow-hidden shrink-0">
                         <img src="/favicon.png" alt="Visual DSA" className="w-full h-full object-contain" />
                     </div>
-                    <span className="text-sm font-semibold tracking-[-0.01em] text-[var(--text-primary)]">
+                    <span className="text-xs font-bold tracking-[-0.01em] text-[var(--text-primary)] uppercase">
                         Visual DSA
                     </span>
                 </div>
-                <a href="https://github.com/vasu-devs/DryRunVisualised" target="_blank" rel="noopener noreferrer" className="neu-extruded neu-base-pill px-4 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)] hover:text-[var(--accent-dark)] transition-all flex items-center gap-2">
-                    <Github size={13} />
+                <a href="https://github.com/vasu-devs/DryRunVisualised" target="_blank" rel="noopener noreferrer" className="neu-extruded neu-base-pill px-4 py-2.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)] hover:text-[var(--accent-dark)] transition-all flex items-center gap-2">
+                    <Github size={14} />
                     GitHub
                 </a>
             </nav>
@@ -322,12 +322,12 @@ export default function LandingPage() {
                 </div>
             </div>
 
-            {/* Credit */}
+            {/* Credit — engraved pill */}
             <a
                 href="https://vasudev.live"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="absolute bottom-6 z-50 text-[10px] font-medium text-[var(--text-secondary)] opacity-40 hover:opacity-100 hover:text-[var(--accent-dark)] transition-all"
+                className="absolute bottom-6 z-50 neu-extruded neu-base-pill px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)] hover:text-[var(--accent-dark)] transition-all"
             >
                 Made with ❤️ by vasu-devs
             </a>

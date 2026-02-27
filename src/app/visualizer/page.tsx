@@ -237,29 +237,17 @@ export default function Home() {
               </optgroup>
             ))}
           </select>
-
-          <div className="w-[1px] h-7 rounded-full neu-inset mx-2 opacity-40" />
-
-          {/* GitHub */}
-          <a
-            href="https://github.com/vasu-devs/DryRunVisualised"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="neu-extruded neu-base-pill px-4 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)] hover:text-[var(--accent-dark)] transition-all flex items-center gap-1.5"
-          >
-            <Github size={13} />
-            GitHub
-          </a>
         </div>
 
-        {/* Credit */}
+        {/* GitHub */}
         <a
-          href="https://vasudev.live"
+          href="https://github.com/vasu-devs/DryRunVisualised"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[10px] font-medium text-[var(--text-secondary)] opacity-50 hover:opacity-100 hover:text-[var(--accent-dark)] transition-all"
+          className="neu-extruded neu-base-pill px-4 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)] hover:text-[var(--accent-dark)] transition-all flex items-center gap-1.5"
         >
-          Made with ❤️ by vasu-devs
+          <Github size={13} />
+          GitHub
         </a>
       </header>
 
