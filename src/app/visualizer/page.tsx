@@ -69,6 +69,42 @@ export default function Home() {
       window.removeEventListener("mouseup", onUp);
     };
   }, []);
+
+  // ─── Vertical resize: code editor vs variables/console ───
+  const [bottomPanelHeight, setBottomPanelHeight] = useState(200);
+  const isVDragging = useRef(false);
+  const leftPanelRef = useRef<HTMLDivElement>(null);
+
+  const handleVDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isVDragging.current = true;
+    document.body.style.cursor = "row-resize";
+    document.body.style.userSelect = "none";
+  }, []);
+
+  useEffect(() => {
+    const onVMove = (e: MouseEvent) => {
+      if (!isVDragging.current || !leftPanelRef.current) return;
+      const rect = leftPanelRef.current.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const panelH = rect.height;
+      const newBottomH = panelH - y;
+      setBottomPanelHeight(Math.min(panelH * 0.5, Math.max(80, newBottomH)));
+    };
+    const onVUp = () => {
+      if (isVDragging.current) {
+        isVDragging.current = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      }
+    };
+    window.addEventListener("mousemove", onVMove);
+    window.addEventListener("mouseup", onVUp);
+    return () => {
+      window.removeEventListener("mousemove", onVMove);
+      window.removeEventListener("mouseup", onVUp);
+    };
+  }, []);
   const setTrace = useTraceStore((state) => state.setTrace);
   const trace = useTraceStore((s) => s.trace);
   const currentStep = useTraceStore((s) => {
@@ -215,7 +251,7 @@ export default function Home() {
             LEFT PANEL — Extruded Control Deck (Resizable)
             ───────────────────────────────────────────────────────── */}
         {!isFullscreen && (
-          <div style={{ width: leftPanelWidth, minWidth: 280, maxWidth: 700 }} className="shrink-0 neu-extruded neu-base-card flex flex-col overflow-hidden">
+          <div ref={leftPanelRef} style={{ width: leftPanelWidth, minWidth: 280, maxWidth: 700 }} className="shrink-0 neu-extruded neu-base-card flex flex-col overflow-hidden">
 
             {/* Controls Row */}
             <div className="shrink-0 px-4 pt-4 pb-3">
@@ -225,44 +261,53 @@ export default function Home() {
             {/* Divider */}
             <div className="neu-divider mx-5" />
 
-            {/* Code Editor — takes ~55% of panel height */}
-            <div className="flex-[6] min-h-0 overflow-hidden">
+            {/* Code Editor — fills remaining space above the bottom panel */}
+            <div className="flex-1 min-h-0 overflow-hidden">
               <CodeEditor code={code} language={language === "cpp" ? "cpp" : language} onChange={(val) => setCode(val || "")} />
             </div>
 
-            {/* Divider */}
-            <div className="neu-divider mx-5" />
-
-            {/* Variables Section */}
-            <div className="flex-[2] min-h-0 overflow-auto px-5 py-3 custom-scrollbar">
-              <h3 className="section-label mb-2.5">Variables</h3>
-              {currentStep ? (
-                <div className="space-y-1">
-                  {Object.entries(currentStep.stack).map(([name, value]) => (
-                    <div key={name} className="flex items-baseline gap-2.5 font-mono text-xs py-1">
-                      <span className="text-[var(--accent-dark)] font-bold min-w-[48px]">{name}</span>
-                      <span className="text-[var(--text-secondary)] opacity-40">=</span>
-                      <span className="text-[var(--text-primary)] truncate">{JSON.stringify(value)}</span>
-                    </div>
-                  ))}
-                  {Object.keys(currentStep.stack).length === 0 && (
-                    <p className="text-[var(--text-secondary)] text-xs italic">No variables in scope</p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-[var(--text-secondary)] text-xs italic">Run code to inspect variables</p>
-              )}
+            {/* ─── Vertical Drag Handle ─── */}
+            <div
+              className="flex justify-center items-center shrink-0 group cursor-row-resize"
+              style={{ height: 12, zIndex: 30 }}
+              onMouseDown={handleVDragStart}
+            >
+              <div className="h-[3px] w-12 rounded-full bg-[var(--text-secondary)] opacity-20 group-hover:opacity-60 group-hover:w-20 group-hover:bg-[var(--accent-dark)] group-hover:h-[4px] transition-all duration-200" />
             </div>
 
-            {/* Divider */}
-            <div className="neu-divider mx-5" />
+            {/* Variables + Console — resizable bottom section */}
+            <div style={{ height: bottomPanelHeight, minHeight: 80 }} className="shrink-0 flex flex-col overflow-hidden">
+              {/* Variables Section */}
+              <div className="flex-1 min-h-0 overflow-auto px-5 py-3 custom-scrollbar">
+                <h3 className="section-label mb-2.5">Variables</h3>
+                {currentStep ? (
+                  <div className="space-y-1">
+                    {Object.entries(currentStep.stack).map(([name, value]) => (
+                      <div key={name} className="flex items-baseline gap-2.5 font-mono text-xs py-1">
+                        <span className="text-[var(--accent-dark)] font-bold min-w-[48px]">{name}</span>
+                        <span className="text-[var(--text-secondary)] opacity-40">=</span>
+                        <span className="text-[var(--text-primary)] truncate">{JSON.stringify(value)}</span>
+                      </div>
+                    ))}
+                    {Object.keys(currentStep.stack).length === 0 && (
+                      <p className="text-[var(--text-secondary)] text-xs italic">No variables in scope</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[var(--text-secondary)] text-xs italic">Run code to inspect variables</p>
+                )}
+              </div>
 
-            {/* Console Output Section */}
-            <div className="flex-[1.5] min-h-0 overflow-auto px-5 py-3 custom-scrollbar">
-              <h3 className="section-label mb-2.5">Console</h3>
-              <pre className="text-xs font-mono text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed">
-                {currentStep?.stdout || <span className="text-[var(--text-secondary)] italic">Output will appear here...</span>}
-              </pre>
+              {/* Divider */}
+              <div className="neu-divider mx-5" />
+
+              {/* Console Output Section */}
+              <div className="flex-1 min-h-0 overflow-auto px-5 py-3 custom-scrollbar">
+                <h3 className="section-label mb-2.5">Console</h3>
+                <pre className="text-xs font-mono text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed">
+                  {currentStep?.stdout || <span className="text-[var(--text-secondary)] italic">Output will appear here...</span>}
+                </pre>
+              </div>
             </div>
           </div>
         )}
