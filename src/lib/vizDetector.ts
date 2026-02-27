@@ -26,9 +26,10 @@ export interface VizContext {
 }
 
 // Variable names that are "auxiliary" data structures, not primary data
+// NOTE: "dp" and "result" are intentionally excluded — they are often the primary variable
 const AUX_NAMES = new Set([
-    "stack", "queue", "visited", "path", "result", "seen",
-    "temp", "output", "ans", "res", "memo", "cache", "dp",
+    "stack", "queue", "visited", "path", "seen",
+    "temp", "output", "ans", "res", "memo", "cache",
     "parent", "prev", "next", "current", "node",
 ]);
 
@@ -67,11 +68,16 @@ function is2DGrid(val: unknown): boolean {
     // For true grids: all cells in each row must be the SAME type
     // This rejects tuples like [10, true] (number + boolean) which are Python tuples
     for (const row of val) {
-        const types = new Set((row as unknown[]).map(cell => typeof cell));
-        // Mixed types in a single row = tuple/pair, not a grid row
-        if (types.size > 1) return false;
-        // Each cell must be a simple scalar
+        // Filter out null cells for type checking — nulls are valid grid values (Python None)
+        const nonNullCells = (row as unknown[]).filter(cell => cell !== null);
+        if (nonNullCells.length > 0) {
+            const types = new Set(nonNullCells.map(cell => typeof cell));
+            // Mixed types in a single row = tuple/pair, not a grid row
+            if (types.size > 1) return false;
+        }
+        // Each cell must be a simple scalar or null
         for (const cell of row as unknown[]) {
+            if (cell === null) continue;
             if (typeof cell === "number") continue;
             if (typeof cell === "boolean") continue;
             if (typeof cell === "string" && cell.length <= 2) continue;
@@ -118,14 +124,17 @@ export function detectVizType(trace: Trace): VizContext {
         }
     }
 
-    // 1. Search detection — left/right OR low/high + array
-    const hasLeftRight = allVarNames.has("left") && allVarNames.has("right");
-    const hasLowHigh = allVarNames.has("low") && allVarNames.has("high");
+    // 1. Search detection — left/right OR low/high OR l/r OR lo/hi + array
+    const hasLeftRight = (allVarNames.has("left") && allVarNames.has("right")) ||
+        (allVarNames.has("l") && allVarNames.has("r"));
+    const hasLowHigh = (allVarNames.has("low") && allVarNames.has("high")) ||
+        (allVarNames.has("lo") && allVarNames.has("hi"));
     if (hasLeftRight || hasLowHigh) {
         const arrayVar = findBestArray(trace, varSamples);
         if (arrayVar) {
             const searchAux = [
                 "left", "right", "low", "high", "mid",
+                "l", "r", "lo", "hi",
                 "target", "water", "left_max", "right_max",
                 "cut1", "cut2", "result", "current_sum",
             ].filter(v => allVarNames.has(v));

@@ -28,6 +28,26 @@ export const executeLocal = (code: string): Promise<ExecutionResult> => {
                 env: { ...process.env, PYTHONUNBUFFERED: "1" },
             },
             (error, stdout, stderr) => {
+                // Handle maxBuffer exceeded gracefully
+                if (error && 'code' in error && error.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
+                    resolve({
+                        stdout: stdout || "",
+                        stderr: "Output exceeded maximum buffer size (5MB). Your code may have an infinite loop or excessive print statements.",
+                        code: 1,
+                    });
+                    return;
+                }
+
+                // Handle timeout gracefully
+                if (error && 'killed' in error && error.killed) {
+                    resolve({
+                        stdout: stdout || "",
+                        stderr: "Execution timed out after 15 seconds. Your code may contain an infinite loop.",
+                        code: 1,
+                    });
+                    return;
+                }
+
                 resolve({
                     stdout: stdout || "",
                     stderr: stderr || "",

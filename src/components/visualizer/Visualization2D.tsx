@@ -25,7 +25,7 @@ const COLORS = {
     pointer: "var(--accent-cyan)",
     pointerBg: "var(--bg-neu)",
     changed: "#f59e0b",
-    changedBg: "var(--bg-neu)",
+    changedBg: "#fef3c7",
     highlight: "#10b981",
     highlightBg: "var(--bg-neu)",
     danger: "#ef4444",
@@ -184,7 +184,7 @@ function ArrayRow({
                                 alignItems: "center",
                                 justifyContent: "center",
                                 padding: "0 6px",
-                                background: COLORS.cellDefault,
+                                background: changed ? COLORS.changedBg : COLORS.cellDefault,
                                 boxShadow: isPointed || changed ? NEU_SHADOW_PRESSED : NEU_SHADOW_RAISED,
                                 border: `2px solid ${isPointed
                                     ? pointedBy[0].color
@@ -193,7 +193,8 @@ function ArrayRow({
                                         : "transparent"
                                     }`,
                                 borderRadius: NEU_RADIUS_SMALL,
-                                transition: "all 0.2s cubic-bezier(0.25, 1, 0.5, 1)",
+                                transition: "all 0.25s cubic-bezier(0.25, 1, 0.5, 1)",
+                                transform: changed ? "scale(1.08)" : "scale(1)",
                             }}>
                                 <span style={{
                                     color: changed ? COLORS.changed : COLORS.text,
@@ -246,15 +247,16 @@ function ScalarBadge({
             gap: 6,
             padding: "8px 14px",
             borderRadius: NEU_RADIUS_MD,
-            background: COLORS.cardBg,
-            boxShadow: NEU_SHADOW_RAISED,
+            background: changed ? COLORS.changedBg : COLORS.cardBg,
+            boxShadow: changed ? NEU_SHADOW_PRESSED : NEU_SHADOW_RAISED,
             border: `2px solid ${changed
                 ? COLORS.changed
                 : isPointer
                     ? COLORS.pointer
                     : "transparent"
                 }`,
-            transition: "all 0.2s cubic-bezier(0.25, 1, 0.5, 1)",
+            transition: "all 0.25s cubic-bezier(0.25, 1, 0.5, 1)",
+            transform: changed ? "scale(1.05)" : "scale(1)",
         }}>
             <span style={{
                 fontSize: 11,
@@ -300,11 +302,27 @@ function isLinkedListValue2D(val: unknown): val is { __type__: "linked_list"; va
     );
 }
 
-// ─── Linked List View (2D) ────────────────────────────────────
+// ─── Linked List View (2D) — SVG-based proper visualization ───
 function LinkedListView2D({ name, values }: { name: string; values: unknown[] }) {
     const n = values.length;
+    if (n === 0) return null;
+
+    // Layout constants — compute dynamic node width based on content length
+    const maxCharLen = Math.max(4, ...values.map(v => formatCellValue(v).length));
+    const NODE_W = Math.max(72, maxCharLen * 9 + 30);  // scale width to fit content
+    const NODE_H = 36;       // node height
+    const DATA_W = NODE_W - 24;  // data compartment width (leave room for next pointer)
+    const NEXT_W = NODE_W - DATA_W; // next pointer compartment
+    const GAP = 36;          // space between nodes for arrows
+    const PAD_L = 44;        // left padding for HEAD label
+    const PAD_R = 44;        // right padding for NULL label
+    const PAD_Y = 8;         // vertical padding
+
+    const totalW = PAD_L + n * NODE_W + (n - 1) * GAP + PAD_R;
+    const totalH = NODE_H + PAD_Y * 2;
+
     return (
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 14 }}>
             <div style={{
                 display: "flex",
                 alignItems: "center",
@@ -327,96 +345,107 @@ function LinkedListView2D({ name, values }: { name: string; values: unknown[] })
                     linked list [{n}]
                 </span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 0 }}>
-                {/* HEAD label */}
-                <span style={{
-                    fontSize: 9,
-                    fontWeight: 700,
-                    color: "#15803d",
-                    fontFamily: "monospace",
-                    marginRight: 6,
-                    padding: "2px 5px",
-                    background: "#dcfce7",
-                    borderRadius: 4,
-                    border: "1px solid #86efac",
-                }}>
-                    HEAD
-                </span>
-                {values.map((val, idx) => (
-                    <div key={idx} style={{ display: "flex", alignItems: "center" }}>
-                        {/* Node box */}
-                        <div style={{
-                            display: "flex",
-                            alignItems: "stretch",
-                            border: `2px solid ${idx === 0 ? "#22c55e" : "transparent"}`,
-                            borderRadius: NEU_RADIUS_SMALL,
-                            overflow: "hidden",
-                            background: idx === 0 ? COLORS.changedBg : COLORS.cardBg,
-                            boxShadow: idx === 0 ? NEU_SHADOW_PRESSED : NEU_SHADOW_RAISED,
-                            transition: "all 0.2s cubic-bezier(0.25, 1, 0.5, 1)",
-                        }}>
-                            {/* val compartment */}
-                            <div style={{
-                                padding: "6px 10px",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                minWidth: 36,
-                                borderRight: `1px solid var(--shadow-dark)`,
-                            }}>
-                                <span style={{
-                                    color: COLORS.text,
-                                    fontSize: 13,
-                                    fontWeight: 700,
-                                    fontFamily: "monospace",
-                                }}>
+            <div style={{ overflowX: "auto", overflowY: "hidden" }}>
+                <svg
+                    viewBox={`0 0 ${totalW} ${totalH}`}
+                    width={Math.min(totalW, 600)}
+                    height={totalH}
+                    style={{ display: "block", minWidth: totalW }}
+                >
+                    <defs>
+                        <marker id="ll-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                            <path d="M0,0 L8,3 L0,6 Z" fill="#16a34a" />
+                        </marker>
+                    </defs>
+
+                    {/* HEAD label */}
+                    <text
+                        x={PAD_L / 2} y={totalH / 2}
+                        textAnchor="middle" dominantBaseline="central"
+                        fontSize={9} fontWeight={700} fontFamily="monospace"
+                        fill="#15803d"
+                    >
+                        HEAD
+                    </text>
+                    {/* HEAD arrow */}
+                    <line
+                        x1={PAD_L - 8} y1={totalH / 2}
+                        x2={PAD_L - 1} y2={totalH / 2}
+                        stroke="#16a34a" strokeWidth={1.5}
+                        markerEnd="url(#ll-arrow)"
+                    />
+
+                    {values.map((val, idx) => {
+                        const x = PAD_L + idx * (NODE_W + GAP);
+                        const y = PAD_Y;
+                        const isHead = idx === 0;
+
+                        return (
+                            <g key={idx}>
+                                {/* Node outer rect */}
+                                <rect
+                                    x={x} y={y}
+                                    width={NODE_W} height={NODE_H}
+                                    rx={6} ry={6}
+                                    fill="var(--bg-neu)"
+                                    stroke={isHead ? "#22c55e" : "var(--shadow-dark)"}
+                                    strokeWidth={isHead ? 2 : 1.5}
+                                    style={{
+                                        filter: "drop-shadow(2px 2px 3px var(--shadow-dark)) drop-shadow(-1px -1px 2px var(--shadow-light))",
+                                    }}
+                                />
+                                {/* Divider between data and next */}
+                                <line
+                                    x1={x + DATA_W} y1={y + 4}
+                                    x2={x + DATA_W} y2={y + NODE_H - 4}
+                                    stroke="var(--shadow-dark)" strokeWidth={1} opacity={0.5}
+                                />
+                                {/* Data value */}
+                                <text
+                                    x={x + DATA_W / 2} y={y + NODE_H / 2}
+                                    textAnchor="middle" dominantBaseline="central"
+                                    fontSize={13} fontWeight={700} fontFamily="monospace"
+                                    fill={COLORS.text}
+                                >
                                     {formatCellValue(val)}
-                                </span>
-                            </div>
-                            {/* next pointer compartment */}
-                            <div style={{
-                                padding: "6px 6px",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                minWidth: 20,
-                            }}>
-                                <span style={{
-                                    color: idx === n - 1 ? "#dc2626" : "#16a34a",
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                }}>
-                                    {idx === n - 1 ? "∅" : "→"}
-                                </span>
-                            </div>
-                        </div>
-                        {/* Arrow connecting to next */}
-                        {idx < n - 1 && (
-                            <span style={{
-                                color: "#16a34a",
-                                fontSize: 14,
-                                fontWeight: 700,
-                                margin: "0 2px",
-                            }}>
-                                →
-                            </span>
-                        )}
-                    </div>
-                ))}
-                {/* NULL label */}
-                <span style={{
-                    fontSize: 9,
-                    fontWeight: 700,
-                    color: "#dc2626",
-                    fontFamily: "monospace",
-                    marginLeft: 6,
-                    padding: "2px 5px",
-                    background: "#fee2e2",
-                    borderRadius: 4,
-                    border: "1px solid #fca5a5",
-                }}>
-                    NULL
-                </span>
+                                </text>
+                                {/* Next pointer indicator */}
+                                <text
+                                    x={x + DATA_W + NEXT_W / 2} y={y + NODE_H / 2}
+                                    textAnchor="middle" dominantBaseline="central"
+                                    fontSize={10} fontWeight={700}
+                                    fill={idx === n - 1 ? "#dc2626" : "#16a34a"}
+                                >
+                                    {idx === n - 1 ? "∅" : "•"}
+                                </text>
+
+                                {/* Arrow to next node */}
+                                {idx < n - 1 && (
+                                    <line
+                                        x1={x + NODE_W + 2}
+                                        y1={y + NODE_H / 2}
+                                        x2={x + NODE_W + GAP - 2}
+                                        y2={y + NODE_H / 2}
+                                        stroke="#16a34a"
+                                        strokeWidth={1.8}
+                                        markerEnd="url(#ll-arrow)"
+                                    />
+                                )}
+                            </g>
+                        );
+                    })}
+
+                    {/* NULL label at end */}
+                    <text
+                        x={PAD_L + n * NODE_W + (n - 1) * GAP + PAD_R / 2}
+                        y={totalH / 2}
+                        textAnchor="middle" dominantBaseline="central"
+                        fontSize={9} fontWeight={700} fontFamily="monospace"
+                        fill="#dc2626"
+                    >
+                        NULL
+                    </text>
+                </svg>
             </div>
         </div>
     );

@@ -1,31 +1,56 @@
 import { Trace, TraceStep, TraceStepSchema } from "../schema";
 
+export interface ParseTraceResult {
+    steps: Trace;
+    truncated: boolean;
+}
+
+/**
+ * Sanitize control characters from a string to prevent JSON.parse crashes.
+ * Removes all control chars (\x00-\x1F) except tab (\x09).
+ */
+function sanitizeJsonString(str: string): string {
+    // eslint-disable-next-line no-control-regex
+    return str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+}
+
 /**
  * Parses raw execution output from the backend.
  * Extracts lines prefixed with __TRACE__ and validates them.
+ * Returns both the trace steps and whether the trace was truncated.
  */
 export const parseTrace = (stdout: string): Trace => {
+    return parseTraceResult(stdout).steps;
+};
+
+export const parseTraceResult = (stdout: string): ParseTraceResult => {
     const steps: TraceStep[] = [];
     const lines = stdout.split('\n');
+    let truncated = false;
 
     for (const line of lines) {
-        if (line.startsWith("__TRACE__")) {
+        const trimmed = line.trim();
+        if (trimmed === "__TRACE_TRUNCATED__") {
+            truncated = true;
+            continue;
+        }
+        if (trimmed.startsWith("__TRACE__")) {
             try {
-                const jsonStr = line.replace("__TRACE__", "");
+                const jsonStr = sanitizeJsonString(trimmed.replace("__TRACE__", ""));
                 const rawStep = JSON.parse(jsonStr);
                 const parsed = TraceStepSchema.safeParse(rawStep);
                 if (parsed.success) {
                     steps.push(parsed.data);
                 }
             } catch (e) {
-                console.error("Failed to parse trace line:", line, e);
+                console.error("Failed to parse trace line:", trimmed, e);
             }
         }
     }
 
     let processedSteps = transformCustomObjectGraphs(steps);
     processedSteps = transformTreeStructures(processedSteps);
-    return processedSteps;
+    return { steps: processedSteps, truncated };
 };
 
 /**

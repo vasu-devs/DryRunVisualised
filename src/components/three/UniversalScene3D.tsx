@@ -216,8 +216,12 @@ function is2DGrid(val: unknown): boolean {
     const len = firstRow.length;
     for (const row of val) {
         if (!Array.isArray(row) || row.length !== len) return false;
-        const types = new Set((row as unknown[]).map(cell => typeof cell));
-        if (types.size > 1) return false;
+        // Filter out null cells for type checking — nulls are valid (Python None)
+        const nonNullCells = (row as unknown[]).filter(cell => cell !== null);
+        if (nonNullCells.length > 0) {
+            const types = new Set(nonNullCells.map(cell => typeof cell));
+            if (types.size > 1) return false;
+        }
     }
     return true;
 }
@@ -249,23 +253,24 @@ function Bar3D({
     const elapsedRef = useRef(0);
 
     const numericVal = typeof value === "number" ? value : 1;
-    const barHeight = Math.max(0.5, Math.abs(numericVal) * 0.3 + 0.5);
+    // Clamp bar height to prevent scene explosion with huge values (e.g. 10^9)
+    const barHeight = Math.min(15, Math.max(0.5, Math.abs(numericVal) * 0.3 + 0.5));
 
     const [hovered, setHovered] = useState(false);
 
     const targetColor = useMemo(() => {
-        if (isChanged) return new THREE.Color("#1A202C"); // Dark Accent
-        if (isPointed) return new THREE.Color("#2D3748"); // Primary Text color as secondary accent
+        if (isChanged) return new THREE.Color("#fcd34d"); // Vibrant Amber
+        if (isPointed) return new THREE.Color("#bae6fd"); // Soft blue pointer base
         if (hovered) return new THREE.Color("#ffffff"); // Highlight on hover
-        if (color === "rgba(24, 24, 27, 0.5)") return new THREE.Color("#ECECEC"); // Override old dark default
-        return new THREE.Color("#ECECEC"); // Force Neumorphic base
+        if (color === "rgba(24, 24, 27, 0.5)") return new THREE.Color("#e0f2fe"); // Soft sky blue default
+        return new THREE.Color("#e0f2fe"); // Force vibrant light base
     }, [isChanged, isPointed, hovered, color]);
 
     const targetEmissive = useMemo(() => {
-        if (isChanged) return new THREE.Color("#1A202C");
-        if (isPointed) return new THREE.Color("#2D3748");
+        if (isChanged) return new THREE.Color("#f59e0b"); // Strong Amber glow
+        if (isPointed) return new THREE.Color("#38bdf8"); // Bright sky glow
         if (hovered) return new THREE.Color("#f8f9fa");
-        return new THREE.Color("#ffffff");
+        return new THREE.Color("#7dd3fc"); // Subtle blue glow
     }, [isChanged, isPointed, hovered]);
 
     useFrame((_, delta) => {
@@ -349,10 +354,10 @@ function Bar3D({
             <Text
                 position={[0, barHeight + 0.35, 0]}
                 fontSize={0.3}
-                color="#334155" // Slate 700
+                color="#0f172a" // Slate 900
                 anchorX="center"
                 anchorY="middle"
-                outlineWidth={0.015}
+                outlineWidth={0.02}
                 outlineColor="#ffffff"
             >
                 {displayText}
@@ -503,13 +508,13 @@ function GridTile3D({
     const [hovered, setHovered] = useState(false);
 
     const targetColor = useMemo(() => {
-        if (isChanged) return new THREE.Color("#1A202C");
-        if (isPointed) return new THREE.Color("#2D3748");
+        if (isChanged) return new THREE.Color("#fcd34d"); // Vibrant Amber
+        if (isPointed) return new THREE.Color("#c7d2fe"); // Indigo for pointers
         if (hovered) return new THREE.Color("#ffffff");
         const numVal = typeof value === "number" ? value : 0;
-        if (numVal === 0) return new THREE.Color("#ECECEC"); // Neumorphic base
-        if (numVal === 1 || value === true) return new THREE.Color("#cbd5e1"); // Neutral active cell
-        return new THREE.Color("#f1f5f9");
+        if (numVal === 0) return new THREE.Color("#e0e7ff"); // Soft indigo base
+        if (numVal === 1 || value === true) return new THREE.Color("#a5b4fc"); // Active cell
+        return new THREE.Color("#eff6ff"); // Alternate light blue
     }, [isChanged, isPointed, hovered, value]);
 
     useFrame((_, delta) => {
@@ -517,10 +522,13 @@ function GridTile3D({
         if (matRef.current) {
             matRef.current.color.lerp(targetColor, delta * 10);
             if (isChanged) {
-                matRef.current.emissiveIntensity = Math.sin(elapsedRef.current * 4) * 0.2 + 0.5;
+                // Flash strongly with amber emissive
+                matRef.current.emissive = new THREE.Color("#fbbf24");
+                matRef.current.emissiveIntensity = Math.sin(elapsedRef.current * 4) * 0.3 + 0.7;
             } else {
+                matRef.current.emissive = new THREE.Color("#818cf8");
                 matRef.current.emissiveIntensity = THREE.MathUtils.damp(
-                    matRef.current.emissiveIntensity, hovered ? 0.8 : 0.5, 10, delta
+                    matRef.current.emissiveIntensity, hovered ? 0.6 : 0.2, 10, delta
                 );
             }
         }
@@ -538,9 +546,9 @@ function GridTile3D({
             <RoundedBox args={[GRID_TILE, GRID_TILE, tileHeight]} radius={0.2} smoothness={6} castShadow receiveShadow>
                 <meshStandardMaterial
                     ref={matRef}
-                    color="#e6e8ec"
-                    emissive="#ffffff"
-                    emissiveIntensity={0.8}
+                    color="#e0e7ff"
+                    emissive="#818cf8"
+                    emissiveIntensity={0.2}
                     roughness={0.2}
                     metalness={0.1}
                     transparent
@@ -550,9 +558,10 @@ function GridTile3D({
             <Text
                 position={[0, 0, tileHeight / 2 + 0.05]}
                 fontSize={0.22}
-                color="#334155"
+                color="#1e1b4b" // Deep indigo for text
                 anchorX="center"
                 anchorY="middle"
+                outlineWidth={0.015}
                 outlineColor="#ffffff"
             >
                 {displayText}
@@ -583,7 +592,9 @@ function DictView3D({
     xOffset: number;
     zOffset: number;
 }) {
-    const entries = Object.entries(data).slice(0, 20); // Cap to avoid GPU overload
+    const allEntries = Object.entries(data);
+    const entries = allEntries.slice(0, 20); // Cap to avoid GPU overload
+    const truncatedCount = allEntries.length - entries.length;
 
     return (
         <group position={[xOffset, 0, zOffset]}>
@@ -638,6 +649,18 @@ function DictView3D({
                     </group>
                 );
             })}
+            {/* Truncation notice */}
+            {truncatedCount > 0 && (
+                <Text
+                    position={[0, -0.4, 0]}
+                    fontSize={0.18}
+                    color="#94a3b8"
+                    anchorX="center"
+                    anchorY="middle"
+                >
+                    ... and {truncatedCount} more
+                </Text>
+            )}
         </group>
     );
 }
@@ -742,8 +765,8 @@ function Stack3D({
                             receiveShadow
                         >
                             <meshStandardMaterial
-                                color={isNew ? "#22c55e" : isTop ? "#e6e8ec" : "#f1f5f9"}
-                                emissive={isNew ? "#16a34a" : isTop ? "#ffffff" : "#f8f9fa"}
+                                color={isNew ? "#4ade80" : isTop ? "#bfdbfe" : "#dbeafe"}
+                                emissive={isNew ? "#22c55e" : isTop ? "#60a5fa" : "#93c5fd"}
                                 emissiveIntensity={isNew ? 0.8 : isTop ? 0.8 : 0.6}
                                 roughness={0.2}
                                 metalness={0.1}
@@ -921,7 +944,9 @@ function Queue3D({
                             receiveShadow
                         >
                             <meshStandardMaterial
-                                color={isNew ? "#22c55e" : isFront ? "#d4d4d4" : "#e2e2e2"}
+                                color={isNew ? "#4ade80" : isFront ? "#fef08a" : "#fef9c3"}
+                                emissive={isNew ? "#22c55e" : isFront ? "#fde047" : "#fef08a"}
+                                emissiveIntensity={0.6}
                                 roughness={0.2}
                                 metalness={0.1}
                             />
@@ -1042,7 +1067,9 @@ function LinkedListView3D({
                             receiveShadow
                         >
                             <meshStandardMaterial
-                                color={isHead ? "#22c55e" : isTail ? "#d4d4d4" : "#e2e2e2"}
+                                color={isHead ? "#4ade80" : isTail ? "#fca5a5" : "#6ee7b7"}
+                                emissive={isHead ? "#22c55e" : isTail ? "#f87171" : "#34d399"}
+                                emissiveIntensity={0.5}
                                 roughness={0.2}
                                 metalness={0.1}
                             />
@@ -1266,8 +1293,8 @@ function GraphView3D({
                 const pos = layout.get(id);
                 if (!pos) return null;
 
-                let nodeColor = "#f8fafc";
-                let emissive = "#cbd5e1";
+                let nodeColor = "#e0e7ff";
+                let emissive = "#a5b4fc";
                 const isHovered = hoveredNode === id;
 
                 if (id === currentStr) {
@@ -1275,13 +1302,13 @@ function GraphView3D({
                     emissive = "#f97316";
                 } else if (visitedSet.has(id)) {
                     nodeColor = "#dcfce7";
-                    emissive = "#22c55e";
+                    emissive = "#4ade80";
                 } else if (queueSet.has(id)) {
                     nodeColor = "#dbeafe";
-                    emissive = "#3b82f6";
+                    emissive = "#60a5fa";
                 } else if (isHovered) {
                     nodeColor = "#ffffff";
-                    emissive = "#e2e8f0";
+                    emissive = "#c7d2fe";
                 }
 
                 // Add slight bobbing and physical pop on hover
@@ -1312,11 +1339,11 @@ function GraphView3D({
                             <Text
                                 position={[0, 0, 0.45]}
                                 fontSize={0.32}
-                                color="#302a1e"
+                                color="#1e1b4b" // Deep indigo
                                 anchorX="center"
                                 anchorY="middle"
-                                outlineWidth={0.015}
-                                outlineColor="#fcfbf9"
+                                outlineWidth={0.02}
+                                outlineColor="#ffffff"
                             >
                                 {id}
                             </Text>
@@ -1478,8 +1505,8 @@ function StructuredGraph3D({
                 const pos = layout.get(id);
                 if (!pos) return null;
 
-                let nodeColor = "#f8fafc";
-                let emissive = "#cbd5e1";
+                let nodeColor = "#e0e7ff";
+                let emissive = "#a5b4fc";
                 const isHovered = hoveredNode === id;
 
                 if (id === currentStr) {
@@ -1487,13 +1514,13 @@ function StructuredGraph3D({
                     emissive = "#f97316";
                 } else if (visitedSet.has(id)) {
                     nodeColor = "#dcfce7";
-                    emissive = "#22c55e";
+                    emissive = "#4ade80";
                 } else if (queueSet.has(id)) {
                     nodeColor = "#dbeafe";
-                    emissive = "#3b82f6";
+                    emissive = "#60a5fa";
                 } else if (isHovered) {
                     nodeColor = "#ffffff";
-                    emissive = "#e2e8f0";
+                    emissive = "#c7d2fe";
                 }
 
                 const zHover = isHovered ? 0.3 : 0;
@@ -1523,11 +1550,11 @@ function StructuredGraph3D({
                             <Text
                                 position={[0, 0, 0.45]}
                                 fontSize={0.32}
-                                color="#302a1e"
+                                color="#1e1b4b"
                                 anchorX="center"
                                 anchorY="middle"
-                                outlineWidth={0.015}
-                                outlineColor="#fcfbf9"
+                                outlineWidth={0.02}
+                                outlineColor="#ffffff"
                             >
                                 {graph.nodes[id]?.label || id}
                             </Text>
@@ -2122,6 +2149,13 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
             {grids.map((grid, gridIdx) => {
                 const totalRows = grid.value.length;
                 const totalCols = (grid.value[0] as unknown[])?.length || 0;
+
+                // Cap rendering to prevent WebGL crash with huge matrices
+                const MAX_GRID_DIM = 50;
+                const renderRows = Math.min(totalRows, MAX_GRID_DIM);
+                const renderCols = Math.min(totalCols, MAX_GRID_DIM);
+                const isGridTruncated = totalRows > MAX_GRID_DIM || totalCols > MAX_GRID_DIM;
+
                 // Place grids dynamically
                 const yBase = gridYPositions[gridIdx];
 
@@ -2132,7 +2166,7 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
                 return (
                     <DraggableGroup key={grid.name} persistKey={`drag_grid_${grid.name}`} initialPosition={[hasRightCol ? RIGHT_COL_X : 0, yBase, 0]}>
                         <Text
-                            position={[0, totalRows * (GRID_TILE + GRID_GAP) / 2 + 0.5, 0]}
+                            position={[0, renderRows * (GRID_TILE + GRID_GAP) / 2 + 0.5, 0]}
                             fontSize={0.32}
                             color="#38bdf8"
                             anchorX="center"
@@ -2140,10 +2174,10 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
                             outlineWidth={0.015}
                             outlineColor="#fcfbf9"
                         >
-                            {grid.name} [{totalRows}×{totalCols}]
+                            {grid.name} [{totalRows}×{totalCols}]{isGridTruncated ? ` (showing ${renderRows}×${renderCols})` : ''}
                         </Text>
-                        {grid.value.map((row, r) =>
-                            (row as unknown[]).map((cellVal, c) => {
+                        {grid.value.slice(0, renderRows).map((row, r) =>
+                            (row as unknown[]).slice(0, renderCols).map((cellVal, c) => {
                                 const isPointed = (iVal !== undefined && r === iVal && ((wVal !== undefined && c === wVal) || (jVal !== undefined && c === jVal)));
                                 const isChanged = prevStep
                                     ? JSON.stringify(
@@ -2159,8 +2193,8 @@ export function UniversalScene3D({ step, prevStep, vizCtx }: UniversalScene3DPro
                                         col={c}
                                         isPointed={isPointed}
                                         isChanged={isChanged}
-                                        totalRows={totalRows}
-                                        totalCols={totalCols}
+                                        totalRows={renderRows}
+                                        totalCols={renderCols}
                                     />
                                 );
                             })
