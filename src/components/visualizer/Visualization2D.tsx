@@ -24,8 +24,8 @@ const COLORS = {
     accentDim: "var(--slate-400)",
     pointer: "var(--accent-cyan)",
     pointerBg: "var(--bg-neu)",
-    changed: "#f59e0b",
-    changedBg: "#fef3c7",
+    changed: "var(--accent-cyan)",
+    changedBg: "var(--bg-neu)",
     highlight: "#10b981",
     highlightBg: "var(--bg-neu)",
     danger: "#ef4444",
@@ -667,7 +667,7 @@ const BITMASK_VAR_NAMES = new Set([
 const BITMASK_COLORS: Record<string, string> = {
     cols: '#ef4444',    // red — columns taken
     ld: '#f97316',      // orange — left diagonal
-    rd: '#eab308',      // yellow — right diagonal
+    rd: '#a855f7',      // purple — right diagonal
     pos: '#22c55e',     // green — available positions
     p: '#3b82f6',       // blue — current pick
     mask: '#8b5cf6',    // purple
@@ -861,7 +861,7 @@ function BitMaskBoardView({
                     } else if (isLD) {
                         bg = '#f9731615'; border = '#f97316'; label = '╲'; textColor = '#f97316';
                     } else if (isRD) {
-                        bg = '#eab30815'; border = '#eab308'; label = '╱'; textColor = '#eab308';
+                        bg = '#a855f715'; border = '#a855f7'; label = '╱'; textColor = '#a855f7';
                     }
 
                     return (
@@ -899,7 +899,7 @@ function BitMaskBoardView({
                 <span>✓ = <span style={{ color: '#22c55e' }}>available</span></span>
                 <span>× = <span style={{ color: '#ef4444' }}>col blocked</span></span>
                 <span>╲ = <span style={{ color: '#f97316' }}>left diag</span></span>
-                <span>╱ = <span style={{ color: '#eab308' }}>right diag</span></span>
+                <span>╱ = <span style={{ color: '#a855f7' }}>right diag</span></span>
             </div>
         </div>
     );
